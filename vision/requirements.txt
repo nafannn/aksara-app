@@ -1,0 +1,4 @@
+tensorflow-cpu>=2.16   # atau tensorflow (GPU) di Colab/Kaggle
+opencv-python-headless
+pillow            # wajib build dengan raqm (pip wheel resmi sudah menyertakannya)
+numpy
