@@ -1,63 +1,75 @@
-# AKSARA
+# AKSARA: modul Vision & Model (Peran A)
 
-Sistem multimedia untuk mengenali dan mempelajari Aksara Sunda dari foto plang di fasilitas publik.
-Proyek II4050 Rekayasa Sistem Multimedia, Kelompok 3 (ITB, STI).
+Mengubah **foto crop satu baris Aksara Sunda** menjadi **string Unicode + confidence**.
+Transliterasi ke Latin, arti, dan audio dikerjakan B/C; modul ini hanya sampai teks Aksara.
 
-Alur: foto crop baris aksara → pengenalan aksara (Unicode) → transliterasi Latin → arti kata → audio pengucapan.
-Arsitektur: client-server mobile web application (ponsel sebagai klien, server Flask sebagai pemroses).
+## Status jujur (baca dulu)
+| Hal | Status |
+|---|---|
+| Pipeline lengkap (data sintetis → preprocessing → CRNN-CTC → `recognize()` → evaluasi) | ✅ jalan end-to-end |
+| Model terlatih `models/aksara_crnn.keras` | ✅ dilatih 20 epoch di CPU |
+| Hasil pada **test set sintetis** (800 gambar) | CER **5,4%**, akurasi kata **76,8%** |
+| Hasil pada **foto plang asli** | ❌ **belum diuji** (belum ada foto berlabel). Angka di atas optimistis karena test set dibuat dengan generator yang sama |
+| Font | hanya Noto Sans Sundanese. Plang asli memakai tipografi dekoratif → akan ada selisih performa (domain gap) |
+| `latin2aksara.py` | aturan dasar untuk membuat label; **bukan** transliterator produksi, perlu verifikasi manual |
 
-## Struktur repo
+Kesalahan terbanyak model: `paneuleung ↔ pamepet` (eu vs e, bentuknya mirip), `panyecek ↔ panghulu`, dan `xa → sa`.
+
+## Isi folder
 ```
-aksara-app/
-├── README.md
-├── docs/
-│   └── api-contract.md   # kontrak API antar bagian (baca sebelum coding)
-├── vision/               # Peran A: dataset sintetis, preprocessing, model, recognize()
-├── backend/              # Peran B: API Flask, transliterator, SQLite, audio
-└── frontend/             # Peran C: UI mobile web, cropper, evaluasi pengguna
+aksara/charset.py        66 kelas token (blank, spasi, codepoint U+1B80–1BBF) + fungsi CER
+aksara/latin2aksara.py   Latin → Aksara (untuk label/data)
+aksara/synth.py          generator "foto plang" tiruan (A1)
+aksara/preprocess.py     preprocessing OpenCV (A2)
+aksara/model.py          CRNN + CTC (A3)
+aksara/recognize.py      antarmuka untuk B: recognize(image) → {aksara, confidence}  (A4)
+scripts/make_dataset.py  buat dataset sintetis
+scripts/train.py         training / fine-tune
+scripts/evaluate.py      evaluasi teknis (A5)
+scripts/split_real.py    split foto asli PER PLANG
+fonts/  data/  models/
 ```
 
-| Folder | Pemilik | Status |
-|---|---|---|
-| `vision/` | A | Pipeline dan model baseline jalan; belum diuji pada foto asli |
-| `backend/` | B | *(isi tim)* |
-| `frontend/` | C | *(isi tim)* |
-
-## Persiapan
-- **Python 3.12** (TensorFlow belum mendukung 3.14). Disarankan memakai venv per folder.
-- Jangan commit `.venv/`, `node_modules/`, atau berkas `.env`.
-
-### vision/
-```powershell
-cd vision
-uv venv --python 3.12 .venv
-.venv\Scripts\activate
-uv pip install -r requirements.txt
-python scripts/evaluate.py --synth test   # perlu dataset dulu: python scripts/make_dataset.py
+## Cara menjalankan (urut)
+```bash
+pip install -r requirements.txt
+python scripts/make_dataset.py --preview        # cek data/preview.png: kiri foto tiruan, kanan hasil preprocessing
+python scripts/train.py --epochs 20             # ~25 menit di CPU; di Colab GPU jauh lebih cepat
+python scripts/evaluate.py --synth test
 ```
-Detail lengkap ada di `vision/README.md`.
+Di Colab/Kaggle GPU: ubah `IMG_H=64, IMG_W=320` di `aksara/config.py` (rarangkén lebih jelas), lalu ulangi tiga langkah di atas.
 
-### backend/ memanggil vision
-Paket Python-nya bernama `aksara` dan berada di `vision/`. Dari folder `backend/`:
-```powershell
-$env:PYTHONPATH="..\vision"            # PowerShell
-# export PYTHONPATH=../vision          # Mac/Linux
-$env:AKSARA_MOCK="1"                   # jawaban tetap, jika model belum jalan di mesin ini
+## Roadmap A (urutan terbaik)
+| Langkah | Apa | Selesai jika | Status |
+|---|---|---|---|
+| 1 | Pipeline sintetis + model baseline | `recognize()` jalan | ✅ selesai |
+| 2 | **Kirim `recognize()` ke B** (lihat kontrak di bawah) | B bisa memanggil dari Flask | siap dikirim |
+| 3 | **Kumpulkan foto plang asli** (target awal ±100 foto, ≥30 plang berbeda) | file `data/real/labels.csv` terisi | ⏳ butuh kamu + tim |
+| 4 | Fine-tune dengan foto asli (split train) | CER test asli turun | setelah langkah 3 |
+| 5 | Tambah font dekoratif + augmentasi sesuai kegagalan di foto asli | CER per kondisi membaik | iteratif |
+| 6 | Evaluasi final + tulis Bab V (CER, akurasi kata, confusion, per kondisi) | tabel hasil | akhir |
+
+### Langkah 3–4 dengan foto asli
+1. Foto tiap plang dari beberapa kondisi (siang/malam/miring). **Crop manual hanya baris Aksara.**
+2. Isi `data/real/labels.csv` (lihat `labels_contoh.csv`): kolom `file,label,sign_id,kondisi`. `label` = string Aksara Unicode (boleh dibantu `latin_to_aksara`, lalu cek manual). Foto dari plang yang sama harus punya `sign_id` yang sama.
+3. `python scripts/split_real.py data/real/labels.csv` → membuat train/val/test **per plang**.
+4. `python scripts/train.py --epochs 8 --lr 3e-4 --init models/aksara_crnn.keras --real_csv data/real/train.csv`
+5. `python scripts/evaluate.py --real_csv data/real/test.csv` → inilah angka yang boleh masuk laporan.
+
+**Aturan yang tidak boleh dilanggar:** test set dipisah sejak awal dan tidak dipakai untuk tuning; foto dari plang yang sama tidak boleh ada di train dan test sekaligus.
+
+## Kontrak untuk B
+```python
+from aksara.recognize import recognize
+hasil = recognize(image)        # image: np.ndarray (BGR/gray) crop baris aksara
+# → {"aksara": "ᮘᮢᮌ", "confidence": 0.91}
 ```
-Contoh pemakaian ada di `docs/api-contract.md`.
+- Set env `AKSARA_MOCK=1` untuk jawaban tetap ("ᮘᮢᮌ") sebelum model terpasang.
+- Path model: `models/aksara_crnn.keras` (atau env `AKSARA_MODEL`).
+- `confidence` = rata-rata geometrik probabilitas frame non-blank; pada tes sintetis, benar ≈ 0,97 vs salah ≈ 0,88. Tentukan ambang tolak bersama C setelah ada data asli.
+- Input harus berupa crop baris aksara. Foto utuh plang belum didukung (detection otomatis = stretch goal).
 
-## Cara kerja bertiga (Git)
-- Sebelum mulai kerja: `git pull`
-- Setelah selesai: `git add .` → `git commit -m "pesan singkat"` → `git push`
-- Edit foldermu sendiri; perubahan di `docs/api-contract.md` harus diberi tahu ke semua.
-- Jika `git pull` menampilkan `CONFLICT`, jangan di-force; selesaikan bersama.
-
-## Aturan data
-- **Foto plang asli tidak di-commit.** Simpan di folder bersama (Drive); commit hanya `vision/data/real/labels.csv`.
-- **Test set dipisah sejak awal** dan tidak dipakai untuk tuning atau pelatihan. Split berdasarkan plang, bukan berdasarkan foto (`vision/scripts/split_real.py`).
-- Tidak ada angka akurasi dari data sintetis di laporan sebagai akurasi sistem.
-- Repo ini **private**; foto ruang publik bisa memuat wajah atau plat nomor.
-
-## Dokumen terkait
-- `docs/api-contract.md`: kontrak API
-- `vision/README.md`: modul pengenalan aksara
+## Catatan untuk laporan
+- Bab IV: alur gambar → grayscale → normalisasi polaritas → perkecil → crop → deskew (projection profile) → CLAHE + denoise → resize 32×192 → CRNN (CNN 4 blok, BiLSTM 96, CTC) → greedy decoding.
+- Binarisasi sengaja tidak dijadikan keluaran preprocessing (bisa membuang rarangkén tipis); hanya dipakai internal untuk mencari posisi teks. Ini bisa dijadikan eksperimen pembanding di Bab V.
+- Jangan melaporkan CER sintetis sebagai akurasi sistem; laporkan sebagai uji sanity terpisah.
