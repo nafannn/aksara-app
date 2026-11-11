@@ -1,10 +1,12 @@
+import Button from './Button'
 import { useEffect, useRef, useState } from 'react'
 import { ScanHeader } from './GuidedCamera'
-import { adjustCrop, cropPhoto, fullCrop } from '../lib/photo'
+import { adjustCrop, cropPhoto } from '../lib/photo'
 
 const corners = [['nw', 'kiri atas'], ['ne', 'kanan atas'], ['sw', 'kiri bawah'], ['se', 'kanan bawah']]
 
 export default function PhotoCrop({ original, initialCrop, onCancel, onDone }) {
+  const initialSelection = useRef(initialCrop || { x: .08, y: .25, width: .84, height: .5 })
   const [rect, setRect] = useState(initialCrop || { x: .08, y: .25, width: .84, height: .5 })
   const [ready, setReady] = useState(false)
   const [busy, setBusy] = useState(false)
@@ -52,7 +54,7 @@ export default function PhotoCrop({ original, initialCrop, onCancel, onDone }) {
   return <main className="home-shell scan-flow">
     <ScanHeader title="Crop Foto" onBack={cancel} />
     <h2 className="preview-heading">Fokuskan pada aksara</h2>
-    <p className="scan-intro" id="crop-help">Geser area pilihan dan tarik sudutnya untuk memilih satu baris aksara. Tombol panah pada keyboard juga dapat digunakan.</p>
+    <p className="scan-intro" id="crop-help">Sesuaikan ukuran foto dengan tulisan Aksara Sunda.</p>
     <div className="crop-stage"><div className="crop-surface" ref={surface}>
       {original && <img src={original} alt="Foto asli untuk dipotong" draggable={false} onLoad={() => setReady(true)} onError={() => { setReady(false); setError('Foto tidak dapat dibuka. Kembali dan ambil ulang foto.') }} />}
       {ready && <div className="crop-selection" style={{ left: `${rect.x * 100}%`, top: `${rect.y * 100}%`, width: `${rect.width * 100}%`, height: `${rect.height * 100}%` }}>
@@ -61,11 +63,12 @@ export default function PhotoCrop({ original, initialCrop, onCancel, onDone }) {
       </div>}
     </div></div>
     {(!original || error) && <p role="alert" className="capture-error">{error || 'Foto belum tersedia. Kembali dan ambil foto terlebih dahulu.'}</p>}
-    <p className="scan-note">Crop selalu memakai foto asli; hasil tidak diregangkan atau diperkecil.</p>
-    <button className="scan-action" disabled={!ready || busy} onClick={finish}>{busy ? 'Menyimpan Crop…' : 'Selesai Crop'}</button>
-    <button className="scan-action secondary" disabled={busy || !ready} onClick={() => setRect({ ...fullCrop })}>Reset Area Crop</button>
-    <button className="scan-action secondary" onClick={cancel}>Batalkan</button>
+    <div className="action-stack"><Button disabled={!ready} loading={busy} loadingLabel="Menyimpan Crop…" onClick={finish}>Selesai Crop</Button>
+    <Button variant="secondary" disabled={busy || !ready} onClick={() => setRect({ ...initialSelection.current })}>Reset Crop</Button>
+    <Button variant="tertiary" onClick={cancel}>Batalkan</Button></div>
   </main>
 }
+
+
 
 

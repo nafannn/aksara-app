@@ -1,12 +1,12 @@
-.home-shell { width: 100%; max-width: 460px; min-height: 100svh; margin: 0 auto; padding: 30px 24px 32px; background: var(--cream); }
+.home-shell { width: 100%; max-width: 460px; min-height: 100svh; margin: 0 auto; padding: calc(30px + env(safe-area-inset-top, 0px)) max(24px, env(safe-area-inset-right, 0px)) calc(32px + env(safe-area-inset-bottom, 0px)) max(24px, env(safe-area-inset-left, 0px)); background: var(--cream); }
 .brand-row { display: flex; align-items: center; justify-content: space-between; margin-bottom: 22px; }
 .brand { display: flex; align-items: center; gap: 10px; color: var(--forest); text-decoration: none; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 25px; font-weight: 700; letter-spacing: .09em; }
-.brand-mark { display: grid; place-items: center; width: 30px; height: 32px; border-radius: 8px 2px 8px 2px; background: var(--forest); color: var(--gold); font-size: 26px; }
+.brand-logo { display: block; width: 66px; height: 44px; object-fit: contain; flex: none; }
 .icon-button { display: grid; place-items: center; width: 44px; height: 44px; border: 0; border-radius: 50%; background: transparent; color: var(--forest); }
 .icon-button:hover { background: #eae6dc; }
 .hero { position: relative; overflow: hidden; border-radius: 24px; padding: 27px 23px 23px; background: linear-gradient(140deg, #244c3d, #14382e); color: #fff9eb; box-shadow: 0 12px 24px #294d3b20; }
 .hero-content { position: relative; z-index: 1; }
-.eyebrow { font-size: 9px; font-weight: 600; letter-spacing: .19em; text-transform: uppercase; color: #e6cb95; }
+.eyebrow { color: #e6cb95; }
 .gold-rule { display: block; width: 42px; height: 1px; background: var(--gold); margin: 14px 0 18px; }
 .hero h1 { font-size: clamp(32px, 8.5vw, 39px); font-weight: 500; line-height: 1.02; letter-spacing: -.035em; }
 .hero h1 em { color: #e3be7d; font-weight: 500; }
@@ -16,10 +16,6 @@
 .sparkle { position: absolute; top: 35px; right: 0; color: #d6ae65; font-size: 26px; }
 .ornament { display: flex; align-items: center; gap: 11px; color: #c9aa6b; font-size: 17px; margin-bottom: 12px; }
 .ornament span { height: 1px; flex: 1; background: #d6ae6540; }
-.scan-button { display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%; min-height: 48px; border: 0; border-radius: 10px; background: var(--gold); color: var(--forest); font-size: 12px; font-weight: 600; transition: background .18s, transform .18s; }
-.scan-button svg { width: 17px; height: 17px; }
-.scan-button:hover { background: #e6c180; }
-.scan-button:active { transform: translateY(1px); }
 .corner-lines { position: absolute; width: 190px; height: 190px; border: 1px solid #d6ae6538; border-radius: 34px; transform: rotate(45deg); right: -127px; top: -104px; }
 .corner-lines::after { content: ''; position: absolute; inset: 17px; border: 1px solid #d6ae6538; border-radius: 25px; }
 .hero-leaf { position: absolute; left: -38px; bottom: 81px; width: 112px; height: 112px; border: 2px solid #d6ae6528; border-radius: 40% 0 40% 0; transform: rotate(36deg); }
@@ -43,5 +39,18 @@
 .info-dialog h2 { font-size: 29px; margin: 12px 0; font-weight: 600; }
 .info-dialog p { font-size: 12px; line-height: 1.9; color: #5d7267; }
 .close-button { width: 100%; min-height: 44px; border: 0; border-radius: 10px; background: var(--forest); color: white; font-size: 12px; margin-top: 22px; }
-@media (min-width: 600px) { .home-shell { margin: 32px auto; min-height: calc(100svh - 64px); border: 1px solid #e3ddd1; border-radius: 28px; padding: 28px 28px 36px; box-shadow: 0 12px 60px #173c3209; } }
-@media (max-width: 350px) { .home-shell { padding: 20px 16px 28px; } .hero { padding: 23px 18px 20px; } .hero h1 { font-size: 32px; } .hero-art { height: 128px; } .home-footer { gap: 5px; } }
+@media (min-width: 600px) { .home-shell { margin: 32px auto; min-height: calc(100svh - 64px); border: 1px solid #e3ddd1; border-radius: 28px; padding: calc(28px + env(safe-area-inset-top, 0px)) max(28px, env(safe-area-inset-right, 0px)) calc(36px + env(safe-area-inset-bottom, 0px)) max(28px, env(safe-area-inset-left, 0px)); box-shadow: 0 12px 60px #173c3209; } }
+@media (max-width: 350px) { .home-shell { padding: calc(20px + env(safe-area-inset-top, 0px)) max(16px, env(safe-area-inset-right, 0px)) calc(28px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px)); } .hero { padding: 23px 18px 20px; } .hero h1 { font-size: 32px; } .hero-art { height: 128px; } .home-footer { gap: 5px; } }
+
+
+/* Keep SVG geometry square even in narrow headers and guide cards. */
+.icon-button { flex: 0 0 44px; color: #234c3e; }
+.icon-button svg { width: 24px; height: 24px; flex: none; }
+.step-icon { flex-shrink: 0; }
+.step-icon svg { width: 22px; height: 22px; flex: none; }
+
+
+
+.home-start { border-color: #d7bd86; }
+.home-start svg { width: 17px; height: 17px; }
+

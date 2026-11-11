@@ -1,0 +1,3 @@
+.preview-tertiary-actions { display: flex; align-items: center; justify-content: center; gap: 4px; min-width: 0; }
+.preview-tertiary-actions .action-button { flex: 1 1 0; min-width: 0; max-width: 155px; padding: 10px 6px; }
+.preview-action-divider { width: 1px; height: 18px; flex: 0 0 1px; background: #d7bd8680; }

@@ -1,0 +1,30 @@
+.demo-notice { padding: 13px 15px; border: 1px solid #d7bd8677; border-radius: 12px; background: #eee4cf; margin-bottom: 18px; font-size: 10px; line-height: 1.8; }
+.demo-notice strong { font-size: 11px; }
+.demo-notice p { margin-top: 4px; color: #596b5d; }
+.result-card { background: #fffdf9; border: 1px solid #e8dfd0; border-radius: 22px; padding: 24px 18px 16px; box-shadow: 0 8px 25px #234c3e05; }
+.result-label { text-align: center; color: #6b7c6e; }
+.result-script { text-align: center; font-size: 40px; line-height: 1.8; padding: 10px 0 18px; overflow-wrap: anywhere; }
+.result-latin { text-align: center; font-size: 32px; line-height: 1.2; font-weight: 500; margin-top: 6px; overflow-wrap: anywhere; }
+.result-divider { display: flex; align-items: center; gap: 12px; color: #b69b65; margin: 20px 0 16px; }
+.result-divider span { height: 1px; background: #d7bd8655; flex: 1; }
+.meaning-label { color: #6b7c6e; margin: 0 0 8px; }
+.result-meaning { font-size: 12px; line-height: 1.9; overflow-wrap: anywhere; }
+.pronunciation { margin-top: 18px; }
+.pronunciation p { font-size: 10px; line-height: 1.8; color: #687767; margin-top: 7px; }
+.character-learning { margin-top: 17px; background: #fffdf9; border: 1px solid #e8dfd0; border-radius: 18px; overflow: hidden; }
+.learn-toggle { width: 100%; display: flex; align-items: center; justify-content: space-between; text-align: left; padding: 17px 15px; gap: 10px; border: 0; background: transparent; color: #234c3e; }
+.learn-toggle strong { display: block; font-family: 'Cormorant Garamond', Georgia, serif; font-size: 22px; font-weight: 500; }
+.learn-toggle small { display: block; margin-top: 4px; font-size: 10px; color: #687767; line-height: 1.8; }
+.learning-body { padding: 0 15px 16px; }
+.character-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+.character-card { display: flex; flex-direction: column; align-items: center; gap: 7px; padding: 14px 8px; background: #f9f6ef; border: 1px solid #e8dfd0; border-radius: 13px; color: #234c3e; min-width: 0; }
+.character-card.selected { border-color: #b59657; background: #f3ead6; }
+.character-card .sundanese { font-size: 32px; line-height: 1.8; }
+.character-card strong { font-size: 12px; overflow-wrap: anywhere; }
+.character-card small { font-size: 9px; color: #687767; line-height: 1.7; }
+.character-explanation { background: #edf2e9; border-radius: 12px; padding: 14px; margin-top: 12px; font-size: 11px; line-height: 1.9; }
+.character-explanation p { margin-top: 7px; }
+.learning-caption, .learn-empty { color: #687767; font-size: 10px; line-height: 1.9; margin-top: 12px; }
+.result-scan { margin-top: 20px; }
+
+

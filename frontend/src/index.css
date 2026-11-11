@@ -22,3 +22,11 @@ svg { display: block; width: 24px; height: 24px; }
 h1, h2, p { margin: 0; }
 h1, h2 { font-family: 'Cormorant Garamond', Georgia, serif; }
 .sundanese { font-family: 'Noto Sans Sundanese', sans-serif; }
+/* Shared typography for small section labels; colors stay with each section. */
+.section-label {
+  font-family: 'Poppins', sans-serif;
+  font-weight: 500;
+  font-size: 12px;
+  letter-spacing: 0.2px;
+  text-transform: none;
+}

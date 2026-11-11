@@ -1,3 +1,4 @@
+import Button from './Button'
 import { useEffect, useRef, useState } from 'react'
 import { cameraMessages, cameraProblem, capturePhoto, createCameraSession } from '../lib/camera'
 import './ScanFlow.css'
@@ -55,15 +56,18 @@ export default function GuidedCamera({ onBack, onCapture }) {
     <div className="camera-stage">
       <video ref={videoRef} autoPlay muted playsInline aria-label="Pratinjau kamera langsung" />
       {!problem && <>
-        <div className="camera-guide" aria-hidden="true"><i /><i /><i /><i /></div>
-        <p className="camera-hint">Pastikan satu baris aksara terlihat utuh dan mendapat cukup cahaya.</p>
+        <div className="camera-guide" aria-hidden="true"><i /><i /><i /><i />{status === 'ready' && <span className="camera-sweep-track"><span className="camera-sweep-line" /></span>}</div>
+        <p className="camera-hint">Pastikan seluruh tulisan Aksara Sunda terlihat jelas dan tidak terpotong</p>
       </>}
       {status === 'starting' && !problem && <p className="camera-wait" role="status">Menunggu izin dan membuka kamera…</p>}
-      {problem && <div className="camera-problem" role="alert"><span aria-hidden="true">✧</span><h2>Kamera belum tersedia</h2><p>{problem}</p>{secure && supported && <button className="scan-action" onClick={retry}>Coba Lagi</button>}</div>}
+      {problem && <div className="camera-problem" role="alert"><span aria-hidden="true">✧</span><h2>Kamera belum tersedia</h2><p>{problem}</p>{secure && supported && <Button variant="primary" onClick={retry}>Coba Lagi</Button>}</div>}
     </div>
     <div className="capture-controls"><button type="button" className="shutter-button" aria-label="Ambil foto Aksara Sunda" aria-describedby="camera-instruction" disabled={status !== 'ready' || Boolean(problem)} onClick={capture}><span /></button><span>Ambil Foto</span></div>
     {captureError && <p className="capture-error" role="alert">{captureError}</p>}
     <p className="scan-note">Bingkai hanya panduan posisi, bukan deteksi otomatis.</p>
   </main>
 }
+
+
+
 

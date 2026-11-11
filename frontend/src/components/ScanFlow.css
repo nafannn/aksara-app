@@ -25,9 +25,6 @@
 .shutter-button:not(:disabled):active { transform: scale(.94); }
 .scan-note { margin-top: 20px; font-size: 10px; color: #66776a; text-align: center; line-height: 1.8; }
 .capture-error { margin-top: 16px; color: #8b3e29; font-size: 12px; line-height: 1.8; }
-.scan-action { width: 100%; min-height: 48px; border-radius: 10px; padding: 12px; border: 1px solid var(--scan-forest); background: var(--scan-forest); color: #fffdf9; font-size: 12px; font-weight: 600; }
-.camera-problem .scan-action { background: var(--scan-gold); color: #234c3e; border-color: var(--scan-gold); }
-.scan-action.secondary { margin-top: 10px; background: transparent; color: var(--scan-forest); }
 .preview-heading { font-size: 32px; font-weight: 500; margin-bottom: 8px; }
 .captured-photo { display: block; width: 100%; max-height: 52svh; object-fit: contain; background: #172b24; border-radius: 18px; }
 .preview-notice { background: #e7ede2; border-radius: 12px; padding: 16px; margin: 18px 0; font-size: 12px; line-height: 1.9; }
@@ -43,7 +40,11 @@
 .crop-handle.ne { top: -23px; right: -23px; cursor: nesw-resize; }
 .crop-handle.sw { bottom: -23px; left: -23px; cursor: nesw-resize; }
 .crop-handle.se { bottom: -23px; right: -23px; cursor: nwse-resize; }
-.scan-action:disabled { opacity: .5; cursor: not-allowed; }
 .captured-photo { image-orientation: from-image; }
 .crop-stage + .capture-error { margin-bottom: 16px; }
-.scan-note + .scan-action { margin-top: 18px; }
+/* Visual guidance only: the shutter remains the sole capture action. */
+.camera-sweep-track { position: absolute; inset: 4px; border-radius: 2px; overflow: hidden; pointer-events: none; }
+.camera-sweep-line { position: absolute; left: 0; right: 0; top: 0; height: 1px; background: #d7bd86cc; box-shadow: 0 0 6px #d7bd8655; animation: camera-sweep 2.8s ease-in-out infinite alternate; }
+@keyframes camera-sweep { from { top: 0; } to { top: calc(100% - 1px); } }
+@media (prefers-reduced-motion: reduce) { .camera-sweep-line { animation: none; top: 50%; box-shadow: none; } }
+

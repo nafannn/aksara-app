@@ -1,17 +1,22 @@
-import { useRef, useState } from 'react'
+import { useState } from 'react'
 import './App.css'
+import Button from './components/Button'
+import aksaraLogo from './assets/logo-aksara.png'
 import GuidedCamera from './components/GuidedCamera'
 import PhotoPreview from './components/PhotoPreview'
 import PhotoCrop from './components/PhotoCrop'
 import PhotoReady from './components/PhotoReady'
+import ResultPage from './components/ResultPage'
+import HistoryPage from './components/HistoryPage'
+import { bandungDemo } from './data/resultMock'
 import { photoFile } from './lib/photo'
 
 function Icon({ name, ...props }) {
   const paths = {
-    scan: <><circle cx="12" cy="12" r="8" /><circle cx="12" cy="12" r="3" /></>,
-    discover: <><path d="m12 3 3 6 6 3-6 3-3 6-3-6-6-3 6-3Z" /><path d="M12 8v8M8 12h8" /></>,
-    learn: <><path d="M4 4h16v16H4zM7 8h10M7 12h10M7 16h10" /></>,
-    history: <><path d="M4 10a8 8 0 1 1 1 8M4 4v6h6" /><path d="M12 7v5l3 2" /></>,
+    scan: <><path d="M8 3H5a2 2 0 0 0-2 2v3m13-5h3a2 2 0 0 1 2 2v3M3 16v3a2 2 0 0 0 2 2h3m8 0h3a2 2 0 0 0 2-2v-3" /><path d="M7 12h10" /></>,
+    discover: <><circle cx="10.5" cy="10.5" r="6.5" /><path d="m15.1 15.1 5.4 5.4" /></>,
+    learn: <><path d="M12 6C9.5 4.3 6 4 2.5 5v15C6 19 9.5 19.3 12 21c2.5-1.7 6-2 9.5-1V5C18 4 14.5 4.3 12 6Zm0 0v15" /><path d="M6 8.5c1.1-.1 2.2.1 3 .5m-3 3c1.1-.1 2.2.1 3 .5m6-3.5c.8-.4 1.9-.6 3-.5m-3 4c.8-.4 1.9-.6 3-.5" /></>,
+    history: <><path d="M3 10a9 9 0 1 1 2.6 8.4M3 4v6h6" /><path d="M12 7v5l3 2" /></>,
     arrow: <path d="M5 12h14m-6-6 6 6-6 6" />,
   }
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true" {...props}>{paths[name]}</svg>
@@ -29,8 +34,7 @@ function App() {
   const [croppedPhoto, setCroppedPhoto] = useState(null)
   const [crop, setCrop] = useState(null)
   const [selectedFile, setSelectedFile] = useState(null)
-  const dialog = useRef(null)
-  const [panel, setPanel] = useState('scan')
+  const [historyRecord, setHistoryRecord] = useState(null)
 
   function clearPhoto() { setPhoto(null); setCroppedPhoto(null); setCrop(null); setSelectedFile(null) }
   function goHome() { clearPhoto(); setPage('home') }
@@ -40,21 +44,21 @@ function App() {
   if (page === 'camera') return <GuidedCamera onBack={goHome} onCapture={(image) => { clearPhoto(); setPhoto(image); setPage('preview') }} />
   if (page === 'crop') return <PhotoCrop original={photo} initialCrop={crop} onCancel={() => setPage('preview')} onDone={(image, area) => { setCroppedPhoto(image); setCrop(area); setSelectedFile(null); setPage('preview') }} />
   if (page === 'preview') return <PhotoPreview key={croppedPhoto || photo || 'empty'} image={croppedPhoto || photo} cropped={Boolean(croppedPhoto)} onCrop={() => setPage('crop')} onReset={() => { setCroppedPhoto(null); setCrop(null); setSelectedFile(null) }} onUse={usePhoto} onRetake={retake} />
-  if (page === 'ready') return <PhotoReady file={selectedFile} onBack={() => setPage('preview')} onHome={goHome} />
+  if (page === 'ready') return <PhotoReady file={selectedFile} onBack={() => setPage('preview')} onHome={goHome} onDemo={() => setPage('result-demo')} />
 
-  function openPanel(nextPanel) {
-    setPanel(nextPanel)
-    dialog.current.showModal()
-  }
+  if (page === 'result-demo') return <ResultPage data={bandungDemo} isDemo allowDemoSave onBack={() => setPage('ready')} onScanAgain={retake} />
+
+  if (page === 'history') return <HistoryPage onBack={() => setPage('home')} onScan={retake} onSelect={(record) => { setHistoryRecord(record); setPage('history-result') }} />
+  if (page === 'history-result' && historyRecord) return <ResultPage key={historyRecord.id} data={historyRecord.result} isDemo={historyRecord.source === 'demo'} onBack={() => setPage('history')} onScanAgain={retake} />
 
   return (
     <main className="home-shell">
       <header className="brand-row">
         <a className="brand" href="./" aria-label="AKSARA, halaman utama">
-          <span className="brand-mark" aria-hidden="true">✦</span>
+          <img className="brand-logo" src={aksaraLogo} alt="" width="66" height="44" />
           <span>AKSARA</span>
         </a>
-        <button className="icon-button" aria-label="Buka riwayat belajar" title="Riwayat belajar" onClick={() => openPanel('history')}>
+        <button className="icon-button" aria-label="Buka riwayat belajar" title="Riwayat belajar" onClick={() => setPage('history')}>
           <Icon name="history" />
         </button>
       </header>
@@ -64,7 +68,7 @@ function App() {
         <div className="hero-leaf" aria-hidden="true" />
         <div className="hero-diamond" aria-hidden="true" />
         <div className="hero-content">
-          <p className="eyebrow">Warisan Aksara Sunda</p>
+          <p className="eyebrow section-label">Warisan Aksara Sunda</p>
           <span className="gold-rule" aria-hidden="true" />
           <h1 id="hero-title">Kenali Aksara,<br /><em>Temukan Maknanya.</em></h1>
           <p className="hero-description">Setiap tulisan menyimpan cerita. Temukan, pindai, dan pelajari Aksara Sunda yang kamu jumpai.</p>
@@ -73,9 +77,9 @@ function App() {
             <span className="sparkle" aria-hidden="true">✧</span>
           </div>
           <div className="ornament" aria-hidden="true"><span />✥<span /></div>
-          <button className="scan-button" onClick={() => setPage('camera')}>
+          <Button className="home-start" onClick={() => setPage('camera')}>
             <Icon name="scan" /><span>Mulai Scan</span><Icon name="arrow" />
-          </button>
+          </Button>
         </div>
       </section>
 
@@ -94,16 +98,18 @@ function App() {
       </section>
       <footer className="home-footer"><span aria-hidden="true">✧</span><p>Satu tulisan, satu langkah mengenal budaya.</p><span aria-hidden="true">✧</span></footer>
 
-      <dialog ref={dialog} className="info-dialog" aria-labelledby="dialog-title" onClick={(event) => { if (event.target === event.currentTarget) dialog.current.close() }}>
-        <span className="dialog-symbol" aria-hidden="true">✦</span>
-        <h2 id="dialog-title">{panel === 'scan' ? 'Mulai dari satu tulisan' : 'Riwayat Belajar'}</h2>
-        <p>{panel === 'scan' ? 'Halaman pengambilan foto akan hadir di tahap berikutnya. Siapkan foto satu baris Aksara Sunda dengan tulisan yang jelas.' : 'Belum ada riwayat belajar. Fitur ini akan tersedia setelah pemindaian terhubung.'}</p>
-        <form method="dialog"><button className="close-button">Kembali ke Home</button></form>
-      </dialog>
+
     </main>
   )
 }
 
 export default App
+
+
+
+
+
+
+
 
 
