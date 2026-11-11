@@ -1,0 +1,24 @@
+:root {
+  font-family: 'Poppins', sans-serif;
+  color: #173c32;
+  background: #eeeae1;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  --forest: #173c32;
+  --gold: #d6ae65;
+  --cream: #f8f3ea;
+  --muted: #71867b;
+  color-scheme: light;
+}
+* { box-sizing: border-box; }
+body { margin: 0; min-width: 280px; }
+button, a { -webkit-tap-highlight-color: transparent; }
+button { font: inherit; cursor: pointer; }
+button:focus-visible, a:focus-visible { outline: 3px solid #b48435; outline-offset: 5px; }
+button { touch-action: manipulation; }
+svg { display: block; width: 24px; height: 24px; }
+h1, h2, p { margin: 0; }
+h1, h2 { font-family: 'Cormorant Garamond', Georgia, serif; }
+.sundanese { font-family: 'Noto Sans Sundanese', sans-serif; }
