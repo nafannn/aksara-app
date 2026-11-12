@@ -15,7 +15,7 @@ function AudioSource({ source }) {
     player.current = audio
     audio.preload = 'auto'
     const timeout = setTimeout(() => setStatus('error'), 15000)
-    const ready = () => { clearTimeout(timeout); setStatus((current) => current === 'playing' ? current : 'ready') }
+    const ready = () => { clearTimeout(timeout); setStatus('ready') }
     const playing = () => setStatus('playing')
     const failed = () => setStatus('error')
     audio.addEventListener('canplay', ready)

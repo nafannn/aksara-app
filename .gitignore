@@ -3,3 +3,7 @@ __pycache__/
 *.pyc
 data/synth_*.npz
 data/preview.png
+backend/audio/tts_*.mp3
+backend/.env
+backend/.env.*
+!backend/.env.example

@@ -5,11 +5,12 @@ import aksaraLogo from './assets/logo-aksara.png'
 import GuidedCamera from './components/GuidedCamera'
 import PhotoPreview from './components/PhotoPreview'
 import PhotoCrop from './components/PhotoCrop'
-import PhotoReady from './components/PhotoReady'
 import ResultPage from './components/ResultPage'
 import HistoryPage from './components/HistoryPage'
 import { bandungDemo } from './data/resultMock'
 import { photoFile } from './lib/photo'
+import { recognizePhoto } from './services/recognition'
+import ProcessingPage from './components/ProcessingPage'
 
 function Icon({ name, ...props }) {
   const paths = {
@@ -33,18 +34,38 @@ function App() {
   const [photo, setPhoto] = useState(null)
   const [croppedPhoto, setCroppedPhoto] = useState(null)
   const [crop, setCrop] = useState(null)
-  const [selectedFile, setSelectedFile] = useState(null)
   const [historyRecord, setHistoryRecord] = useState(null)
+  const [recognitionResult, setRecognitionResult] = useState(null)
+  const [recognitionError, setRecognitionError] = useState('')
+  const [recognizing, setRecognizing] = useState(false)
 
-  function clearPhoto() { setPhoto(null); setCroppedPhoto(null); setCrop(null); setSelectedFile(null) }
+  function clearPhoto() { setPhoto(null); setCroppedPhoto(null); setCrop(null) }
   function goHome() { clearPhoto(); setPage('home') }
   function retake() { clearPhoto(); setPage('camera') }
-  function usePhoto() { setSelectedFile(photoFile(croppedPhoto || photo)); setPage('ready') }
+  async function recognizeSelectedPhoto(file) {
+    setRecognitionError('')
+    setRecognizing(true)
+    setPage('processing')
+    try {
+      const endpoint = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api/recognize'
+      const result = await recognizePhoto(file, { endpoint })
+      setRecognitionResult(result)
+      setPage('result')
+    } catch (error) {
+      setRecognitionError(error instanceof Error ? error.message : 'Foto belum berhasil diproses.')
+      setPage('preview')
+    } finally {
+      setRecognizing(false)
+    }
+  }
+  function usePhoto() { recognizeSelectedPhoto(photoFile(croppedPhoto || photo)) }
 
   if (page === 'camera') return <GuidedCamera onBack={goHome} onCapture={(image) => { clearPhoto(); setPhoto(image); setPage('preview') }} />
-  if (page === 'crop') return <PhotoCrop original={photo} initialCrop={crop} onCancel={() => setPage('preview')} onDone={(image, area) => { setCroppedPhoto(image); setCrop(area); setSelectedFile(null); setPage('preview') }} />
-  if (page === 'preview') return <PhotoPreview key={croppedPhoto || photo || 'empty'} image={croppedPhoto || photo} cropped={Boolean(croppedPhoto)} onCrop={() => setPage('crop')} onReset={() => { setCroppedPhoto(null); setCrop(null); setSelectedFile(null) }} onUse={usePhoto} onRetake={retake} />
-  if (page === 'ready') return <PhotoReady file={selectedFile} onBack={() => setPage('preview')} onHome={goHome} onDemo={() => setPage('result-demo')} />
+  if (page === 'crop') return <PhotoCrop original={photo} initialCrop={crop} onCancel={() => setPage('preview')} onDone={(image, area) => { setCroppedPhoto(image); setCrop(area); setPage('preview') }} />
+  if (page === 'preview') return <PhotoPreview key={croppedPhoto || photo || 'empty'} image={croppedPhoto || photo} cropped={Boolean(croppedPhoto)} onCrop={() => setPage('crop')} onReset={() => { setCroppedPhoto(null); setCrop(null) }} onUse={usePhoto} onRetake={retake} error={recognitionError} />
+  if (page === 'processing') return <ProcessingPage error={recognitionError} recognizing={recognizing} onBack={() => setPage('preview')} />
+
+  if (page === 'result' && recognitionResult) return <ResultPage data={recognitionResult} onBack={goHome} onScanAgain={retake} />
 
   if (page === 'result-demo') return <ResultPage data={bandungDemo} isDemo allowDemoSave onBack={() => setPage('ready')} onScanAgain={retake} />
 

@@ -21,10 +21,20 @@ export function safeAudioUrl(value, baseUrl) {
 /** @returns {ScanResult} */
 export function normalizeResult(value, baseUrl = 'http://localhost/') {
   const data = value && typeof value === 'object' ? value : {}
+  const success = data.success === true || ['ok', 'not_found'].includes(data.status)
+  const rawCharacters = Array.isArray(data.character_details) ? data.character_details : data.chars
+  const characterDetails = Array.isArray(rawCharacters)
+    ? rawCharacters.filter((item) => item && typeof item === 'object').map((item) => ({
+      aksara: text(item.aksara ?? item.glyph),
+      reading: text(item.reading ?? item.latin),
+      category: text(item.category),
+      explanation: text(item.explanation ?? item.note),
+    }))
+    : []
   return {
-    success: data.success === true,
+    success,
     aksara: text(data.aksara), latin: text(data.latin), meaning: text(data.meaning),
     audio_url: safeAudioUrl(data.audio_url, baseUrl),
-    character_details: Array.isArray(data.character_details) ? data.character_details.filter((item) => item && typeof item === 'object').map((item) => ({ aksara: text(item.aksara), reading: text(item.reading), category: text(item.category), explanation: text(item.explanation) })) : [],
+    character_details: characterDetails,
   }
 }
