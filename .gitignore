@@ -1,8 +1,10 @@
 .venv/
 __pycache__/
 *.pyc
-data/synth_*.npz
-data/preview.png
+.env
+node_modules/
+**/data/synth_*.npz
+**/data/preview.png
 backend/audio/tts_*.mp3
 backend/.env
 backend/.env.*

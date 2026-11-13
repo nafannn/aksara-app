@@ -19,9 +19,9 @@ aksara-app/
 
 | Folder | Pemilik | Status |
 |---|---|---|
-| `vision/` | A | Pipeline dan model baseline jalan; belum diuji pada foto asli |
-| `backend/` | B | *(isi tim)* |
-| `frontend/` | C | *(isi tim)* |
+| `vision/` | A | Pipeline dan model baseline jalan; foto plang asli berlabel belum ada |
+| `backend/` | B | API Flask, transliterator, SQLite; skema respons sesuai `docs/api-contract.md` v0.3 |
+| `frontend/` | C | UI mobile web; terhubung ke API lewat `VITE_API_URL` |
 
 ## Persiapan
 - **Python 3.12** (TensorFlow belum mendukung 3.14). Disarankan memakai venv per folder.
@@ -61,3 +61,4 @@ Contoh pemakaian ada di `docs/api-contract.md`.
 ## Dokumen terkait
 - `docs/api-contract.md`: kontrak API
 - `vision/README.md`: modul pengenalan aksara
+- `docs/deploy.md`: cara men-deploy frontend dan backend
