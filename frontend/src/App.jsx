@@ -9,6 +9,7 @@ import ResultPage from './components/ResultPage'
 import HistoryPage from './components/HistoryPage'
 import { bandungDemo } from './data/resultMock'
 import { photoFile } from './lib/photo'
+import { resolveEndpoint } from './lib/endpoint'
 import { recognizePhoto } from './services/recognition'
 import ProcessingPage from './components/ProcessingPage'
 
@@ -47,7 +48,7 @@ function App() {
     setRecognizing(true)
     setPage('processing')
     try {
-      const endpoint = import.meta.env.VITE_API_URL || 'http://127.0.0.1:5000/api/recognize'
+      const endpoint = resolveEndpoint(window.location.search, import.meta.env.VITE_API_URL)
       const result = await recognizePhoto(file, { endpoint })
       setRecognitionResult(result)
       setPage('result')
