@@ -127,6 +127,23 @@ Kesimpulan:
 Dua batas yang terlihat dari eksperimen ini: ukuran kanvas 32×192 (detail rarangkén hilang
 pada kata 12+ gugus) dan volume data. Keduanya perlu diubah bersama, bukan salah satu saja.
 
+## Label literal vs bentuk baku
+
+Plang kadang menulis bentuk yang tidak baku (mis. "jala.dra." untuk "jl. dr.", atau
+menyisipkan `ᮃ` sehingga terbaca "kosaasiha"). Dataset menyimpan dua kolom:
+
+| Kolom | Isi | Dipakai untuk |
+|---|---|---|
+| `label` | transkripsi **literal** dari yang tercetak | training & evaluasi |
+| `label_baku` | bentuk yang seharusnya menurut kaidah | analisis, bukan target model |
+
+Untuk `jl. achmad sobana` label literalnya belum dicatat (pembaca baru mengisi bentuk
+baku), jadi `label_baku` terisi sementara `catatan` menandai hal ini.
+
+Contoh nyata dari arsip: `jl. rd. kosasih kel. cikaret` di plang terbaca
+"jala.dra. kosaasiha kela. cikaareta" — bukan penulisan yang benar, tetapi itulah yang
+harus dipelajari model.
+
 ## Status
 
 Per November 2026: 5 sumber berbeda (Cimanuk, Bahureksa, Braga, Banda, frasa Cilaki) dan 6
