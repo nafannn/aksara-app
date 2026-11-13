@@ -4,7 +4,7 @@ import { normalizeResult, safeAudioUrl } from './result.js'
 import { recognizePhoto } from './recognition.js'
 
 test('missing result fields produce safe defaults and retain learning units', () => {
-  assert.deepEqual(normalizeResult(null), { success: false, aksara: null, latin: null, meaning: null, meaning_source: null, matched_latin: null, audio_url: null, character_details: [] })
+  assert.deepEqual(normalizeResult(null), { success: false, aksara: null, latin: null, meaning: null, meaning_source: null, matched_latin: null, confidence: null, uncertain: false, audio_url: null, character_details: [] })
   const result = normalizeResult({ success: true, aksara: 'ᮘ', character_details: [null, { aksara: 'ᮘ', reading: 'ba' }] })
   assert.equal(result.character_details.length, 1)
   assert.equal(result.character_details[0].explanation, null)
@@ -16,6 +16,16 @@ test('meaning provenance is whitelisted so a guess is never shown as a dictionar
   assert.equal(fuzzy.matched_latin, 'braga')
   assert.equal(normalizeResult({ success: true, aksara: 'ᮘ', meaning_source: 'pasti' }).meaning_source, null)
   assert.equal(normalizeResult({ success: true, aksara: 'ᮘ', matched_latin: '   ' }).matched_latin, null)
+})
+test('low-confidence readings are flagged instead of shown as certain', () => {
+  const unsure = normalizeResult({ success: true, aksara: 'ᮨᮡᮨᮘᮡ', latin: 'bya', confidence: 0.42 })
+  assert.equal(unsure.confidence, 0.42)
+  assert.equal(unsure.uncertain, true)
+  const sure = normalizeResult({ success: true, aksara: 'ᮠᮁᮒ', latin: 'harta', confidence: 0.97 })
+  assert.equal(sure.uncertain, false)
+  assert.equal(normalizeResult({ success: true, aksara: 'ᮘ', confidence: 1.7 }).confidence, 1)
+  assert.equal(normalizeResult({ success: true, aksara: 'ᮘ', confidence: '0.9' }).confidence, null)
+  assert.equal(normalizeResult({ success: false, confidence: 0.2 }).uncertain, false)
 })
 test('audio references resolve relative to backend and reject unsafe schemes', () => {
   assert.equal(safeAudioUrl('/audio/bandung.mp3', 'https://api.example.test/scan'), 'https://api.example.test/audio/bandung.mp3')

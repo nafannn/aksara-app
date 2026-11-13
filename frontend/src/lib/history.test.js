@@ -2,6 +2,11 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { HISTORY_KEY, getHistory, getHistoryItem, saveHistory, clearHistory, readHistory, historyTextKey } from './history.js'
 import { bandungDemo } from '../data/resultMock.js'
+import { normalizeResult } from '../services/result.js'
+
+// Riwayat menyimpan hasil yang sudah dinormalisasi (termasuk field turunan seperti
+// `uncertain`), jadi pembandingnya juga harus dinormalisasi.
+const expectedDemo = normalizeResult(bandungDemo)
 
 function storage() {
   const values = new Map()
@@ -13,7 +18,7 @@ test('empty history, save, reread persistence and complete result reopening', ()
   const saved = saveHistory({ ...bandungDemo, photo: 'must not store' }, { source: 'demo' })
   assert.equal(saved.saved, true)
   const item = getHistoryItem(saved.item.id)
-  assert.deepEqual(item.result, bandungDemo)
+  assert.deepEqual(item.result, expectedDemo)
   assert.equal(item.source, 'demo')
   assert.equal(item.result.photo, undefined)
   assert.equal(JSON.parse(localStorage.getItem(HISTORY_KEY)).length, 1)

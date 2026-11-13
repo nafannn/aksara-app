@@ -5,6 +5,8 @@
 .result-label { text-align: center; color: #6b7c6e; }
 .result-script { text-align: center; font-size: 40px; line-height: 1.8; padding: 10px 0 18px; overflow-wrap: anywhere; }
 .result-latin { text-align: center; font-size: 32px; line-height: 1.2; font-weight: 500; margin-top: 6px; overflow-wrap: anywhere; }
+.confidence-warning { margin-top: 14px; padding: 11px 13px; border: 1px solid #c9a22766; border-radius: 12px; background: #fdf6e3; color: #6b5414; font-size: 10px; line-height: 1.8; text-align: center; }
+.confidence-warning strong { color: #4a3a08; }
 .result-divider { display: flex; align-items: center; gap: 12px; color: #b69b65; margin: 20px 0 16px; }
 .result-divider span { height: 1px; background: #d7bd8655; flex: 1; }
 .meaning-label { color: #6b7c6e; margin: 0 0 8px; }

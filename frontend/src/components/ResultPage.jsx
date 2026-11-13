@@ -23,6 +23,7 @@ export default function ResultPage({ data, isDemo = false, allowDemoSave = false
       <div className="result-script sundanese" lang="su">{result.aksara || 'Aksara belum tersedia'}</div>
       <p className="result-label section-label">Transliterasi Latin</p>
       <h2 className="result-latin">{result.latin || 'Bacaan belum tersedia'}</h2>
+      {result.uncertain && <p className="confidence-warning" role="status">Model hanya <strong>{Math.round(result.confidence * 100)}%</strong> yakin pada bacaan ini. Periksa ulang, lalu coba foto lebih dekat dengan baris aksara yang rata.</p>}
       <div className="result-divider" aria-hidden="true"><span />✧<span /></div>
       <h3 className="meaning-label section-label">Makna</h3><p className="result-meaning">{result.meaning || 'Makna belum tersedia dalam kamus.'}</p>
       {result.meaning_source === 'mirip' && result.matched_latin && <p className="meaning-note">Belum ada di kamus. Makna di atas diambil dari kata terdekat: <strong>{result.matched_latin}</strong>. Periksa kembali bacaannya.</p>}
