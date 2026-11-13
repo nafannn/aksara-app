@@ -37,7 +37,8 @@ def load_real(csv_path):
     base = os.path.dirname(csv_path)
     xs, ys = [], []
     for row in csv.DictReader(open(csv_path, encoding="utf-8")):
-        img = cv2.imread(os.path.join(base, row["file"]))
+        data = np.fromfile(os.path.join(base, row["file"]), dtype=np.uint8)
+        img = cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
         if img is None:
             continue
         xs.append(preprocess(img)); ys.append(row["label"])

@@ -144,6 +144,32 @@ Contoh nyata dari arsip: `jl. rd. kosasih kel. cikaret` di plang terbaca
 "jala.dra. kosaasiha kela. cikaareta" — bukan penulisan yang benar, tetapi itulah yang
 harus dipelajari model.
 
+## Eksperimen leave-one-style-out (uji = plang)
+
+Pertanyaan: apakah data asli dari gaya lain membantu model membaca plang?
+
+- Latih: sintetis 3000 gambar + **21 sampel asli non-plang** (tulisan tangan 7, cetak 11,
+  neon 1, ukir 1, dinding 1), oversampling ×20, 8 epoch, `--init` dari model yang dipakai.
+- Uji: **10 plang** yang tidak pernah dilihat model (split per gaya, lihat
+  `scripts/make_real_splits.py`).
+
+| Model | Sintetis test (n=1000) | Plang uji (n=10) | 21 sampel latih (in-sample) |
+|---|---|---|---|
+| `aksara_crnn.keras` | 0,0534 | 1,0625 (kata 1/10) | 0,6485 |
+| `exp_realft.keras` | 0,0562 | 1,0000 (kata 1/10) | **0,0000 (21/21 tepat)** |
+
+Kesimpulan:
+
+1. Fine-tune **menghafal** 21 sampel sampai sempurna (CER 0%), tetapi perpindahan ke plang
+   hampir nol (1,0625 → 1,0000). Kenaikan apa pun di set latih tidak boleh dilaporkan
+   sebagai perbaikan sistem.
+2. Retensi sintetis aman (0,0534 → 0,0562) — resep fine-tune tidak merusak model, jadi
+   masalahnya bukan pada cara melatih, melainkan pada data.
+3. **Gaya penulisan adalah faktor dominan.** Contoh dari tulisan tangan dan cetak tidak
+   mengajari tipografi plang; untuk plang dibutuhkan contoh plang.
+4. CER bisa melewati 1,0 karena kesalahan sisipan dihitung sebagai edit; ini normal untuk
+   CTC dan bukan bug.
+
 ## Status
 
 Per November 2026: 5 sumber berbeda (Cimanuk, Bahureksa, Braga, Banda, frasa Cilaki) dan 6
