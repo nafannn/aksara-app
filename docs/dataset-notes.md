@@ -88,6 +88,20 @@ ambang tolak: satu sampel yang tepat bernilai 0,948, tetapi sampel salah ada di 
 `n = 6` hanya cukup untuk menunjukkan arah, bukan untuk menyimpulkan akurasi sistem.
 Angka ini adalah baseline "sebelum", bukan hasil akhir.
 
+Setelah 10 sampel tambahan dari arsip pengguna diverifikasi (campuran tulisan tangan, render
+digital, dan foto plang), angka yang diperbarui pada **n = 16**:
+
+| Metrik | Nilai |
+|---|---|
+| CER | **0,9304** |
+| Akurasi kata | 2/16 (0,125) |
+| Confidence rata-rata (benar) | 0,9738 |
+| Confidence rata-rata (salah) | 0,6729 |
+
+Dua yang tepat: plang BANDA dan kartu `ᮠᮁᮒ` (harta) — keduanya memakai bentuk huruf yang
+dekat dengan Noto. Menarik bahwa `harta` hanya 5 karakter, jadi keberhasilan pada kata pendek
+tidak berarti model paham struktur rarangkén.
+
 ## Eksperimen augmentasi (20 epoch, 3000 gambar sintetis)
 
 Dua model dilatih dengan resep identik (3000 train / 300 val, 20 epoch, lr 2e-3,
