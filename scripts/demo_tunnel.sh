@@ -43,19 +43,28 @@ curl -fsS --max-time 5 "http://127.0.0.1:$PORT/healthz" >/dev/null || {
 }
 
 echo "== 3/3 buka tunnel publik =="
-cloudflared tunnel --url "http://localhost:$PORT" --no-autoupdate >"${TMPDIR:-/tmp}/aksara-tunnel.log" 2>&1 &
-TUNNEL_PID=$!
-
-URL=""
-for _ in $(seq 1 40); do
-  URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "${TMPDIR:-/tmp}/aksara-tunnel.log" | head -1 || true)"
-  [[ -n "$URL" ]] && break
-  sleep 2
-done
-
-if [[ -z "$URL" ]]; then
-  echo "tunnel tidak memberi URL; lihat ${TMPDIR:-/tmp}/aksara-tunnel.log" >&2
-  exit 1
+if [[ -n "${AKSARA_TUNNEL:-}" ]]; then
+  # Tunnel bernama: URL tetap (mis. https://aksara-api.otwdochub.my.id).
+  cloudflared tunnel run "$AKSARA_TUNNEL" >"${TMPDIR:-/tmp}/aksara-tunnel.log" 2>&1 &
+  TUNNEL_PID=$!
+  URL="${AKSARA_PUBLIC_URL:-}"
+  if [[ -z "$URL" ]]; then
+    echo "AKSARA_TUNNEL diset tapi AKSARA_PUBLIC_URL kosong; isi hostname tetapnya." >&2
+    exit 1
+  fi
+else
+  cloudflared tunnel --url "http://localhost:$PORT" --no-autoupdate >"${TMPDIR:-/tmp}/aksara-tunnel.log" 2>&1 &
+  TUNNEL_PID=$!
+  URL=""
+  for _ in $(seq 1 40); do
+    URL="$(grep -Eo 'https://[a-z0-9-]+\.trycloudflare\.com' "${TMPDIR:-/tmp}/aksara-tunnel.log" | head -1 || true)"
+    [[ -n "$URL" ]] && break
+    sleep 2
+  done
+  if [[ -z "$URL" ]]; then
+    echo "tunnel tidak memberi URL; lihat ${TMPDIR:-/tmp}/aksara-tunnel.log" >&2
+    exit 1
+  fi
 fi
 
 cat <<EOF

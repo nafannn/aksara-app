@@ -1,0 +1,13 @@
+# Template konfigurasi Cloudflare Tunnel untuk AKSARA.
+# Salin ke ~/.cloudflared/config.yml lalu sesuaikan id tunnel dan hostname.
+# Dibuat dengan:
+#   cloudflared tunnel login
+#   cloudflared tunnel create aksara
+#   cloudflared tunnel route dns aksara aksara-api.<domain>
+tunnel: GANTI-DENGAN-ID-TUNNEL
+credentials-file: C:\Users\USER\.cloudflared\GANTI-DENGAN-ID-TUNNEL.json
+
+ingress:
+  - hostname: aksara-api.<domain>
+    service: http://localhost:18080
+  - service: http_status:404

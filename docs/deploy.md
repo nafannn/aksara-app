@@ -97,22 +97,45 @@ tanpa penjelasan. Kalau kamu atau anggota tim punya kartu yang lolos:
 Karakter Render free: RAM 512 MB (puncak terukur 237 MB), **tidur setelah 15 menit tanpa trafik**
 (~1 menit untuk bangun), disk ephemeral, 750 jam instance/bulan.
 
-## 4. Demo tanpa host: satu URL dari laptop (tanpa akun, tanpa kartu)
+## 4. Demo dari laptop: tunnel bernama, URL tetap
 
-Kalau semua host gratis menolak (kartu, kredit habis), sidang tetap bisa jalan dari laptop:
+Tunnel tetap membuat alamat backend tidak berubah, jadi `VITE_API_URL` di Vercel cukup diisi **sekali**.
+Butuh akun Cloudflare dan satu domain yang DNS-nya sudah di Cloudflare.
 
+**Setup sekali:**
 ```bash
-bash scripts/demo_tunnel.sh
+cloudflared tunnel login                                # pilih domain, Authorize
+cloudflared tunnel create aksara                        # mencatat id + berkas kredensial
+cloudflared tunnel route dns aksara aksara-api.<domain> # membuat CNAME
+cp docs/cloudflared-config.example.yml ~/.cloudflared/config.yml   # lalu isi id & hostname
+```
+
+**Setiap sesi demo:**
+```bash
+AKSARA_TUNNEL=aksara \
+AKSARA_PUBLIC_URL=https://aksara-api.<domain> \
+  bash scripts/demo_tunnel.sh
 ```
 
 Skrip itu: build frontend dengan API relatif → jalankan backend yang juga menyajikan `frontend/dist`
-(`AKSARA_SERVE_FRONTEND=1`) → buka Cloudflare Quick Tunnel → mencetak satu URL HTTPS. Buka URL itu di
-ponsel; kamera jalan karena HTTPS, dan API-nya ada di origin yang sama sehingga tidak ada CORS dan tidak
-ada `VITE_API_URL` yang perlu diubah kalau URL berganti. Ctrl+C menghentikan server dan tunnel sekaligus.
+(`AKSARA_SERVE_FRONTEND=1`) → jalankan tunnel bernama → cetak URL tetapnya. Frontend dan API berada di
+origin yang sama, jadi tidak ada CORS. Ctrl+C menghentikan server dan tunnel sekaligus.
 
-Butuh `cloudflared` di PATH (`cloudflared --version`) dan port `AKSARA_DEMO_PORT` (default 18080) yang bebas.
-Batasannya: laptop harus hidup dan tidak sleep selama sesi, URL berganti setiap kali skrip dijalankan, dan
-tunnel ini untuk demo — Cloudflare sendiri menyebut Quick Tunnel bukan untuk produksi.
+Alamat yang dipakai proyek ini: **`https://aksara-api.otwdochub.my.id`** (tunnel `aksara`, id
+`345cff70-7b50-4414-b228-6d5537856a9c`).
+
+Batasan: laptop harus hidup dan tidak sleep selama sesi. Kalau laptop mati, URL tetap ada di DNS tetapi
+tidak ada yang menjawab.
+
+**Tanpa domain** — Quick Tunnel, URL berubah tiap sesi:
+
+```bash
+bash scripts/demo_tunnel.sh          # mencetak https://<acak>.trycloudflare.com
+```
+
+Kalau frontend sudah ter-deploy di Vercel dan URL backend berubah, tidak perlu build ulang: buka
+`https://<app-vercel>/?api=https://<tunnel>/api/recognize`. Query `?api=` menimpa `VITE_API_URL` yang
+tertanam saat build (hanya http/https yang diterima).
 
 Cara manual (mis. backend sudah berjalan di Docker):
 
@@ -120,9 +143,6 @@ Cara manual (mis. backend sudah berjalan di Docker):
 docker run -p 8080:8080 -e AKSARA_CORS_ORIGIN="*" aksara-backend
 cloudflared tunnel --url http://localhost:8080
 ```
-
-Bedanya, di jalur manual frontend tidak ikut disajikan backend, jadi frontend (di Vercel) harus menunjuk
-ke URL tunnel itu dan perlu redeploy setiap kali URL berubah.
 
 ## 5. Status host lain (dicek November 2026, bisa berubah)
 
@@ -143,6 +163,10 @@ ke URL tunnel itu dan perlu redeploy setiap kali URL berubah.
 4. Deploy. Karena `VITE_API_URL` dibaca saat build, kalau URL backend berubah, **redeploy**.
 
 Tidak perlu `vercel.json`.
+
+Catatan Windows: `vercel deploy` lewat CLI di mesin ini gagal dua kali (EPERM symlink di cache
+`builders-vlt`, lalu `fetch failed` saat membuat deployment). Deploy lewat dashboard (impor repo) tidak
+memakai builder lokal itu, jadi pakai jalur dashboard.
 
 Uji build dengan URL backend sebenarnya sebelum deploy:
 ```bash
