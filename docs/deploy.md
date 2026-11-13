@@ -61,28 +61,69 @@ Variabel lingkungan:
 
 Host wajib menyediakan **HTTPS**: kamera di ponsel memblokir permintaan HTTP campuran.
 
-## 2. Render (jalur gratis yang sudah diukur muat)
+## 2. Railway (tanpa kartu, trial 30 hari)
 
-1. Render → **New → Blueprint** → pilih repo ini. `render.yaml` di root sudah menyetel Docker, plan
-   Free, `AKSARA_AUDIO_DIR`, dan health check ke `/healthz`.
+Cocok kalau verifikasi kartu di Render ditolak.
+
+1. railway.app → **New Project → Deploy from GitHub repo** → pilih repo ini. `railway.toml` sudah menunjuk
+   Dockerfile di `backend/Dockerfile` dan health check ke `/healthz`.
+2. Tab **Variables**:
+
+   | Variabel | Nilai |
+   |---|---|
+   | `AKSARA_AUDIO_DIR` | `/data/aksara-audio` |
+   | `AKSARA_CORS_ORIGIN` | URL Vercel (isi setelah frontend jadi) |
+   | `APIPEDIA_API_KEY` | opsional |
+   | `GOOGLE_TRANSLATE_SCRIPT_URL` | opsional |
+
+3. Tab **Settings → Networking → Generate Domain** → dapat `https://xxx.up.railway.app`.
+4. `curl https://xxx.up.railway.app/healthz` → `{"status":"ok"}`.
+
+Batas: trial memberi kredit $5 selama 30 hari (sampai 2 vCPU / 1 GB per service, tanpa kartu). Setelah itu
+plan Free hanya memberi kredit $1/bulan, jadi service akan berhenti saat kredit habis — cukup untuk periode
+tugas, tapi jangan dijadikan hosting permanen.
+
+## 3. Render (perlu verifikasi kartu)
+
+Blueprint `render.yaml` tetap disediakan, tapi Render meminta verifikasi kartu dan sebagian kartu ditolak
+tanpa penjelasan. Kalau kamu atau anggota tim punya kartu yang lolos:
+
+1. Render → **New → Blueprint** → pilih repo ini. Blueprint menyetel Docker, plan Free, `AKSARA_AUDIO_DIR`,
+   dan health check `/healthz`.
 2. Isi variabel yang diminta (boleh dikosongkan): `AKSARA_CORS_ORIGIN`, `APIPEDIA_API_KEY`,
    `GOOGLE_TRANSLATE_SCRIPT_URL`.
-3. Setelah deploy, `curl https://URL-RENDER/healthz` harus menjawab `{"status":"ok"}`.
 
 Karakter Render free: RAM 512 MB (puncak terukur 237 MB), **tidur setelah 15 menit tanpa trafik**
-(~1 menit untuk bangun), disk ephemeral, 750 jam instance/bulan. Sebelum sidang, buka URL backend sekali
-supaya container tidak dingin.
+(~1 menit untuk bangun), disk ephemeral, 750 jam instance/bulan.
 
-## 3. Status host lain (dicek November 2026, bisa berubah)
+## 4. Cadangan demo: Cloudflare Quick Tunnel (tanpa akun, tanpa kartu)
+
+Kalau tidak ada host yang bisa dipakai saat sidang, jalankan backend di laptop dan buka lewat tunnel HTTPS:
+
+```bash
+# terminal 1 — backend
+docker run -p 8080:8080 -e AKSARA_CORS_ORIGIN="*" aksara-backend
+# terminal 2 — tunnel
+cloudflared tunnel --url http://localhost:8080
+```
+
+`cloudflared` mencetak URL `https://xxx.trycloudflare.com` yang langsung bisa dibuka ponsel (HTTPS, jadi
+kamera jalan). Tanpa akun dan tanpa biaya. Dua batasan: URL **berubah setiap kali** tunnel dijalankan, dan
+laptop harus tetap hidup selama dipakai — jadi `VITE_API_URL` di Vercel perlu diperbarui lalu redeploy
+setiap kali URL berganti. Untuk sidang, jalankan tunnel lebih dulu, perbarui env, baru redeploy.
+
+## 5. Status host lain (dicek November 2026, bisa berubah)
 
 | Host | Catatan |
 |---|---|
-| Hugging Face Spaces (Docker) | Space Docker/Gradio di hardware `cpu-basic` sekarang **butuh paket PRO**; tanpa itu pembuatan gagal HTTP 402. RAM 16 GB, disk tidak persisten, Space pause setelah 48 jam idle |
-| Render | Free 512 MB + sleep 15 menit. Instance berbayar mulai $7/bln (0,5 CPU/512 MB) |
-| Google Cloud Run | Ada kuota gratis, tapi disk hanya `/tmp`; untuk audio perlu mount bucket |
-| Fly.io / Railway | Perlu akun + metode bayar |
+| Railway | Trial $5/30 hari tanpa kartu (2 vCPU / 1 GB). Plan Free setelahnya hanya $1/bulan kredit |
+| Render | Free 512 MB + sleep 15 menit, tapi verifikasi kartu sering menolak |
+| Hugging Face Spaces (Docker) | Space Docker/Gradio di `cpu-basic` butuh paket PRO; tanpa itu gagal HTTP 402 |
+| Koyeb | Sejak Feb 2026 wajib kartu dengan hold $29 |
+| Fly.io | Tanpa free tier; trial 2 jam mesin atau 7 hari, lalu wajib kartu |
+| Google Cloud Run | Ada kuota gratis, tapi wajib billing account (kartu) dan disk hanya `/tmp` |
 
-## 4. Frontend (Vercel)
+## 6. Frontend (Vercel)
 
 1. Di Vercel: **Add New → Project → Import** repo ini.
 2. **Root Directory: `frontend`**, Framework Preset: **Vite** (terdeteksi otomatis).
@@ -98,7 +139,7 @@ VITE_API_URL=https://URL-BACKEND-KAMU/api/recognize npm run build
 npx vite preview --port 4179 --host localhost
 ```
 
-## 5. Cek setelah deploy
+## 7. Cek setelah deploy
 - `curl https://URL-BACKEND/healthz` → `{"status":"ok"}`.
 - `curl -F "image=@contoh.png;type=image/png" https://URL-BACKEND/api/recognize` → ada `aksara`, `latin`,
   `audio_url`.

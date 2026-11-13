@@ -1,0 +1,13 @@
+# Railway: backend AKSARA sebagai Docker web service.
+# Pakai: railway.app -> New Project -> Deploy from GitHub repo -> pilih repo ini.
+# railway.toml ini yang memberi tahu Railway Dockerfile-nya ada di backend/.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "backend/Dockerfile"
+watchPatterns = ["backend/**", "vision/**"]
+
+[deploy]
+healthcheckPath = "/healthz"
+healthcheckTimeout = 300
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 3
