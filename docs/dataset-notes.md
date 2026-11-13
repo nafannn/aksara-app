@@ -62,7 +62,34 @@ pada satu kondisi.
 - Foto dari blog/Instagram tidak dipakai walau teksnya bisa diverifikasi — lisensinya tidak
   jelas.
 
+## Baseline model pada data asli (6 crop, 5 plang)
+
+Diukur dengan `scripts/evaluate.py --real_csv data/real/labels.csv` memakai model
+`models/aksara_crnn.keras` yang dilatih hanya dengan data sintetis:
+
+| Plang | Confidence | CER | Hasil |
+|---|---|---|---|
+| BANDA | 0,948 | **0,000** | `ᮏᮜᮔ᮪ ᮘᮔ᮪ᮓ` tepat |
+| Cilaki | 0,831 | 0,522 | separuh benar |
+| Cimanuk (foto 1) | 0,694 | 0,667 | salah |
+| Braga | 0,678 | 0,875 | salah |
+| Cimanuk (foto 2) | 0,640 | 1,750 | salah |
+| Bahureksa | 0,508 | 1,923 | salah |
+
+Agregat: **CER 0,9481**, akurasi kata **1/6**. Bandingkan dengan CER 0,0539 pada test
+sintetis — selisih ini adalah domain gap, bukan regresi kode.
+
+Yang perlu dicatat saat menulis laporan: kegagalannya **tidak seragam**. Plang BANDA
+terbaca tepat, jadi model tidak buta terhadap foto asli; yang gagal adalah plang dengan
+tipografi dekoratif (huruf jalan) yang tidak pernah dilihat model. Confidence juga bukan
+ambang tolak: satu sampel yang tepat bernilai 0,948, tetapi sampel salah ada di 0,83
+(Cilaki) — lebih tinggi daripada beberapa yang salah total.
+
+`n = 6` hanya cukup untuk menunjukkan arah, bukan untuk menyimpulkan akurasi sistem.
+Angka ini adalah baseline "sebelum", bukan hasil akhir.
+
 ## Status
 
-Per November 2026: 4 plang berbeda (Cimanuk, Bahureksa, Braga, Banda) — jauh di bawah
-kebutuhan ±20–30 plang untuk fine-tune yang bisa dipertanggungjawabkan.
+Per November 2026: 5 sumber berbeda (Cimanuk, Bahureksa, Braga, Banda, frasa Cilaki) dan 6
+crop, semuanya sudah diverifikasi pembaca aksara. Masih jauh di bawah kebutuhan ±20–30 plang
+untuk fine-tune yang bisa dipertanggungjawabkan.
