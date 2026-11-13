@@ -10,6 +10,10 @@
  */
 const text = (value) => typeof value === 'string' && value.trim() ? value.trim() : null
 
+// Server hanya boleh menandai asal makna dengan nilai yang dikenal; nilai lain
+// diabaikan supaya UI tidak pernah menampilkan tebakan seolah makna pasti.
+const MEANING_SOURCES = new Set(['kamus', 'mirip', 'terjemahan', 'bacaan'])
+
 export function safeAudioUrl(value, baseUrl) {
   if (!text(value)) return null
   try {
@@ -34,6 +38,8 @@ export function normalizeResult(value, baseUrl = 'http://localhost/') {
   return {
     success,
     aksara: text(data.aksara), latin: text(data.latin), meaning: text(data.meaning),
+    meaning_source: MEANING_SOURCES.has(data.meaning_source) ? data.meaning_source : null,
+    matched_latin: text(data.matched_latin),
     audio_url: safeAudioUrl(data.audio_url, baseUrl),
     character_details: characterDetails,
   }

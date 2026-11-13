@@ -25,6 +25,9 @@ export default function ResultPage({ data, isDemo = false, allowDemoSave = false
       <h2 className="result-latin">{result.latin || 'Bacaan belum tersedia'}</h2>
       <div className="result-divider" aria-hidden="true"><span />✧<span /></div>
       <h3 className="meaning-label section-label">Makna</h3><p className="result-meaning">{result.meaning || 'Makna belum tersedia dalam kamus.'}</p>
+      {result.meaning_source === 'mirip' && result.matched_latin && <p className="meaning-note">Belum ada di kamus. Makna di atas diambil dari kata terdekat: <strong>{result.matched_latin}</strong>. Periksa kembali bacaannya.</p>}
+      {result.meaning_source === 'terjemahan' && <p className="meaning-note">Makna diterjemahkan otomatis, belum diperiksa manusia.</p>}
+      {result.meaning_source === 'bacaan' && <p className="meaning-note">Satu aksara: yang ditampilkan adalah bacaannya, bukan arti kata.</p>}
       <PronunciationPlayer source={result.audio_url} />
     </section>
     {isDemo && allowDemoSave && <div><Button variant="tertiary" onClick={saveDemo}>Simpan Contoh Demo ke Riwayat</Button><p className="history-save-status" role="status">{saveMessage}</p></div>}

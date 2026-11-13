@@ -4,11 +4,18 @@ import { normalizeResult, safeAudioUrl } from './result.js'
 import { recognizePhoto } from './recognition.js'
 
 test('missing result fields produce safe defaults and retain learning units', () => {
-  assert.deepEqual(normalizeResult(null), { success: false, aksara: null, latin: null, meaning: null, audio_url: null, character_details: [] })
+  assert.deepEqual(normalizeResult(null), { success: false, aksara: null, latin: null, meaning: null, meaning_source: null, matched_latin: null, audio_url: null, character_details: [] })
   const result = normalizeResult({ success: true, aksara: 'ᮘ', character_details: [null, { aksara: 'ᮘ', reading: 'ba' }] })
   assert.equal(result.character_details.length, 1)
   assert.equal(result.character_details[0].explanation, null)
   assert.equal(result.success, true)
+})
+test('meaning provenance is whitelisted so a guess is never shown as a dictionary fact', () => {
+  const fuzzy = normalizeResult({ success: true, aksara: 'ᮘᮢᮌ᮪', meaning: 'Nama kawasan di Bandung', meaning_source: 'mirip', matched_latin: 'braga' })
+  assert.equal(fuzzy.meaning_source, 'mirip')
+  assert.equal(fuzzy.matched_latin, 'braga')
+  assert.equal(normalizeResult({ success: true, aksara: 'ᮘ', meaning_source: 'pasti' }).meaning_source, null)
+  assert.equal(normalizeResult({ success: true, aksara: 'ᮘ', matched_latin: '   ' }).matched_latin, null)
 })
 test('audio references resolve relative to backend and reject unsafe schemes', () => {
   assert.equal(safeAudioUrl('/audio/bandung.mp3', 'https://api.example.test/scan'), 'https://api.example.test/audio/bandung.mp3')

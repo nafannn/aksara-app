@@ -4,6 +4,8 @@ export const bandungDemo = {
   aksara: 'ᮘᮔ᮪ᮓᮥᮀ',
   latin: 'Bandung',
   meaning: 'Nama kota di Jawa Barat',
+  meaning_source: 'kamus',
+  matched_latin: null,
   audio_url: null,
   character_details: [
     { aksara: 'ᮘ', reading: 'ba', category: 'Aksara dasar', explanation: 'Bagian awal contoh kata Bandung dibaca “ba”.' },

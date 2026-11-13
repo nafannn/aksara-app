@@ -9,6 +9,8 @@
 .result-divider span { height: 1px; background: #d7bd8655; flex: 1; }
 .meaning-label { color: #6b7c6e; margin: 0 0 8px; }
 .result-meaning { font-size: 12px; line-height: 1.9; overflow-wrap: anywhere; }
+.meaning-note { margin-top: 8px; font-size: 10px; line-height: 1.8; color: #6b7c6e; }
+.meaning-note strong { color: #234c3e; }
 .pronunciation { margin-top: 18px; }
 .pronunciation p { font-size: 10px; line-height: 1.8; color: #687767; margin-top: 7px; }
 .character-learning { margin-top: 17px; background: #fffdf9; border: 1px solid #e8dfd0; border-radius: 18px; overflow: hidden; }
