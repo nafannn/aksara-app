@@ -9,3 +9,9 @@ backend/audio/tts_*.mp3
 backend/.env
 backend/.env.*
 !backend/.env.example
+# Foto plang asli tidak di-commit (lihat README bagian aturan data).
+vision/data/real/*
+!vision/data/real/labels_contoh.csv
+!vision/data/real/labels.csv
+# Keluaran diagnosa scripts/debug_one.py
+vision/data/debug/
