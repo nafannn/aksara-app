@@ -170,6 +170,35 @@ Kesimpulan:
 4. CER bisa melewati 1,0 karena kesalahan sisipan dihitung sebagai edit; ini normal untuk
    CTC dan bukan bug.
 
+## Percobaan resep lain: semuanya datar
+
+Semua baris dilatih pada data sintetis 3.000 gambar, 20 epoch, kanvas 32×192 kecuali
+disebut lain, lalu diuji pada 31 foto asli dan 10 plang yang tak pernah dilihat.
+
+| Percobaan | Sintetis (n=1000) | Foto asli (n=31) | **Plang (n=10)** |
+|---|---|---|---|
+| satu font, augmentasi basic | **0,1678** | **0,7918** | 0,9062 |
+| satu font, augmentasi strong | 0,2023 | 0,8601 | **0,8750** |
+| empat weight font, basic | 0,1787 | 0,8635 | 1,0078 |
+| kanvas 64×320, basic | 0,1941 | 0,8737 | 1,0625 |
+| model produksi (12.000 sintetis) | 0,0534 | 0,8294 | 1,0625 |
+
+Yang boleh disimpulkan:
+
+1. **Tidak ada resep yang menurunkan CER plang secara berarti.** Semuanya tinggal di
+   0,87–1,06. Dengan n=10, selisih antar baris berada dalam derau, jadi peringkat
+   antar percobaan ini tidak boleh diklaim sebagai "yang terbaik".
+2. **Menambah keragaman tanpa menambah jumlah contoh membuat hasil lebih buruk.**
+   Kanvas 64×320 (4× piksel), empat weight font, dan augmentasi strong semuanya
+   membagi anggaran 3.000 gambar ke lebih banyak variasi — model jadi kurang terlatih
+   (loss akhir 2,85 di 4-font vs 0,25 di satu font).
+3. **Menambah jumlah sintetis tidak otomatis menolong foto.** Model 12.000 gambar
+   (CER sintetis 0,0534 — terbaik di domainnya) justru tidak lebih baik pada foto asli
+   (0,8294) dibanding model 3.000 gambar (0,7918).
+4. Kesimpulan keseluruhan: model **kekurangan contoh pada gaya target**, bukan
+   kekurangan resep. Variasi sintetis hanya berguna bila volumenya ikut naik, dan
+   tetap tidak menggantikan contoh plang asli.
+
 ## Status
 
 Per November 2026: 5 sumber berbeda (Cimanuk, Bahureksa, Braga, Banda, frasa Cilaki) dan 6
