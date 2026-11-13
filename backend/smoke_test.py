@@ -42,10 +42,10 @@ def main() -> None:
             content_type="multipart/form-data",
         )
         assert valid.status_code == 200, valid.json
-        assert valid.json["status"] in {"ok", "not_found", "unrecognized"}
+        assert valid.json["success"] is True, valid.json
         assert "aksara" in valid.json
         assert "latin" in valid.json
-        assert "chars" in valid.json
+        assert "character_details" in valid.json
         print("Smoke test passed")
         print(json.dumps(valid.json, ensure_ascii=True))
 

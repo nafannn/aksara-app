@@ -8,10 +8,11 @@ dengan mode mock dari modul vision.
 Dari folder `aksara-app`:
 
 ```powershell
-$env:PYTHONPATH=".\vision"
 $env:AKSARA_MOCK="1"
 python -m backend.app
 ```
+
+`PYTHONPATH` tidak perlu diatur: `app.py` menambahkan `../vision` ke path secara otomatis.
 
 Server berjalan di `http://127.0.0.1:5000`.
 
@@ -66,8 +67,8 @@ Test ini mengirim gambar PNG kecil langsung ke Flask test client dan memeriksa:
 
 - request tanpa gambar menghasilkan HTTP 400;
 - gambar valid diproses;
-- response memiliki `status`, `aksara`, `latin`, dan `chars`;
-- status hasil merupakan salah satu status yang disepakati.
+- response memiliki `success`, `aksara`, `latin`, `meaning`, `audio_url`, dan `character_details`
+  (skema mengikuti frontend; lihat `docs/api-contract.md`).
 
 ## Mengisi kosakata contoh
 
@@ -81,3 +82,25 @@ Nama jalan diberi deskripsi lokasi, bukan terjemahan literal. Daftar ini dapat
 diperluas di `seed.py` tanpa mengubah frontend.
 
 Setelah model Role A siap, hapus `AKSARA_MOCK` agar backend memanggil recognizer asli.
+
+## Tes otomatis
+
+Dari folder `backend`:
+
+```powershell
+pip install pytest
+$env:AKSARA_MOCK="1"
+python -m pytest -q tests
+```
+
+## Deployment
+
+Lihat `docs/deploy.md`. Ringkasnya: backend dijalankan sebagai Docker (gunicorn), bukan di Vercel,
+karena TensorFlow terlalu besar untuk fungsi serverless.
+
+Variabel lingkungan tambahan:
+
+- `AKSARA_AUDIO_DIR`: folder cache audio (default `backend/audio`; otomatis memakai folder
+  sementara jika folder itu tidak bisa ditulis).
+- `AKSARA_CORS_ORIGIN`: origin frontend yang diizinkan.
+- `AKSARA_MAX_UPLOAD_BYTES`: batas ukuran upload (default 8 MB).

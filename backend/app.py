@@ -3,6 +3,8 @@
 from __future__ import annotations
 
 import os
+import sys
+import tempfile
 from pathlib import Path
 
 from flask import Flask, jsonify, request, send_from_directory
@@ -20,6 +22,39 @@ except ImportError:  # pragma: no cover - exercised by the local runner
 
 
 DEFAULT_MAX_BYTES = 8 * 1024 * 1024
+
+# Modul pengenalan (`aksara`) ada di ../vision. Dengan ini PYTHONPATH tidak wajib diatur manual.
+_VISION_DIR = Path(__file__).resolve().parent.parent / "vision"
+if _VISION_DIR.is_dir() and str(_VISION_DIR) not in sys.path:
+    sys.path.insert(0, str(_VISION_DIR))
+
+
+def writable_dir(preferred: Path) -> Path:
+    """Folder untuk cache audio. Jika folder pilihan tidak bisa ditulis (mis. filesystem
+    read-only di serverless), pakai folder sementara."""
+    try:
+        preferred.mkdir(parents=True, exist_ok=True)
+        probe = preferred / ".write_test"
+        probe.write_bytes(b"")
+        probe.unlink()
+        return preferred
+    except OSError:
+        fallback = Path(tempfile.gettempdir()) / "aksara_audio"
+        fallback.mkdir(parents=True, exist_ok=True)
+        return fallback
+
+
+def character_details(chars: list[dict]) -> list[dict]:
+    """Ubah keluaran transliterator ke bentuk yang dibaca frontend (kontrak v0.3)."""
+    return [
+        {
+            "aksara": item.get("glyph", ""),
+            "reading": item.get("latin", ""),
+            "category": item.get("category", ""),
+            "explanation": item.get("explanation", ""),
+        }
+        for item in chars
+    ]
 
 
 def load_env_file(path: Path) -> None:
@@ -41,7 +76,7 @@ def create_app(test_config: dict | None = None) -> Flask:
     app.config.from_mapping(
         MAX_CONTENT_LENGTH=int(os.getenv("AKSARA_MAX_UPLOAD_BYTES", DEFAULT_MAX_BYTES)),
         DATABASE=str(root / "data" / "vocab.db"),
-        AUDIO_DIR=str(root / "audio"),
+        AUDIO_DIR=os.getenv("AKSARA_AUDIO_DIR", str(root / "audio")),
         APIPEDIA_API_KEY=os.getenv("APIPEDIA_API_KEY", ""),
         APIPEDIA_VOICE=os.getenv("APIPEDIA_VOICE", "su-ID-TutiNeural"),
         GOOGLE_TRANSLATE_SCRIPT_URL=os.getenv("GOOGLE_TRANSLATE_SCRIPT_URL", ""),
@@ -60,19 +95,19 @@ def create_app(test_config: dict | None = None) -> Flask:
         return response
 
     Path(app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
-    Path(app.config["AUDIO_DIR"]).mkdir(parents=True, exist_ok=True)
+    app.config["AUDIO_DIR"] = str(writable_dir(Path(app.config["AUDIO_DIR"])))
 
     @app.errorhandler(413)
     def too_large(_error):
-        return jsonify(status="error", message="Berkas terlalu besar"), 413
+        return jsonify(success=False, message="Berkas terlalu besar"), 413
 
     @app.post("/api/recognize")
     def recognize_endpoint():
         uploaded = request.files.get("image")
         if uploaded is None or not uploaded.filename:
-            return jsonify(status="error", message="Field image wajib diisi"), 400
+            return jsonify(success=False, message="Field image wajib diisi"), 400
         if uploaded.mimetype not in {"image/jpeg", "image/png"}:
-            return jsonify(status="error", message="Tipe gambar harus JPEG atau PNG"), 415
+            return jsonify(success=False, message="Tipe gambar harus JPEG atau PNG"), 415
 
         data = uploaded.read()
         try:
@@ -80,21 +115,21 @@ def create_app(test_config: dict | None = None) -> Flask:
             import numpy as np
             image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_COLOR)
         except ImportError:
-            return jsonify(status="error", message="Dependensi image processing belum terpasang"), 500
+            return jsonify(success=False, message="Dependensi image processing belum terpasang"), 500
         if image is None:
-            return jsonify(status="error", message="Berkas bukan gambar yang valid"), 400
+            return jsonify(success=False, message="Berkas bukan gambar yang valid"), 400
 
         try:
             from aksara.recognize import recognize
             result = recognize(image)
         except Exception:
             app.logger.exception("recognition failed")
-            return jsonify(status="error", message="Gagal memproses gambar"), 500
+            return jsonify(success=False, message="Gagal memproses gambar"), 500
 
         aksara = result.get("aksara", "")
         confidence = float(result.get("confidence", 0.0))
         if not aksara.strip():
-            return jsonify(status="unrecognized", aksara="", latin="", chars=[], meaning=None, audio_url=None, confidence=confidence)
+            return jsonify(success=False, aksara="", latin=None, meaning=None, audio_url=None, character_details=[], confidence=confidence)
 
         translated = transliterate(aksara)
         connection = connect(app.config["DATABASE"])
@@ -127,13 +162,13 @@ def create_app(test_config: dict | None = None) -> Flask:
             )
         audio_url = f"/audio/{audio_file}" if audio_file else None
         return jsonify(
-            status="ok" if word else "not_found",
+            success=True,
             aksara=aksara,
             latin=translated.latin,
-            confidence=confidence,
-            chars=translated.chars,
             meaning=meaning,
             audio_url=audio_url,
+            character_details=character_details(translated.chars),
+            confidence=confidence,
         )
 
     @app.get("/audio/<path:filename>")

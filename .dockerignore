@@ -1,0 +1,10 @@
+.git
+frontend
+docs
+**/__pycache__
+**/*.pyc
+**/.venv
+vision/data/*.npz
+vision/data/preview.png
+backend/audio
+backend/.env

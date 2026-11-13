@@ -1,6 +1,6 @@
 # Kontrak API AKSARA
 
-Versi: **0.2 (DRAFT)**
+Versi: **0.3 (DRAFT)**
 **Keputusan: skema respons mengikuti frontend** (`frontend/src/services/result.js`). Backend menyesuaikan, frontend tidak diubah.
 Pemilik keputusan akhir: B. Reviewer: A dan C. Perubahan harus diumumkan ke semua anggota.
 
