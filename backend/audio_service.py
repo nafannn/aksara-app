@@ -13,6 +13,15 @@ APIPEDIA_TTS_URL = "https://api.apipedia.id/v1/tts"
 MAX_TEXT_LENGTH = 5000
 
 
+def cache_filename(
+    text: str,
+    voice: str = "su-ID-TutiNeural",
+) -> str:
+    """Nama berkas deterministik untuk satu teks + voice (dipakai cache & audio bawaan)."""
+    key = hashlib.sha256(f"{voice}\0{text.strip()}".encode("utf-8")).hexdigest()[:20]
+    return f"tts_{key}.mp3"
+
+
 def synthesize_audio(
     text: str,
     audio_dir: str | Path,
@@ -27,8 +36,7 @@ def synthesize_audio(
 
     destination_dir = Path(audio_dir)
     destination_dir.mkdir(parents=True, exist_ok=True)
-    cache_key = hashlib.sha256(f"{voice}\0{normalized}".encode("utf-8")).hexdigest()[:20]
-    filename = f"tts_{cache_key}.mp3"
+    filename = cache_filename(normalized, voice)
     destination = destination_dir / filename
     if destination.exists() and destination.stat().st_size > 0:
         return filename

@@ -1,0 +1,21 @@
+# Blueprint Render: backend AKSARA sebagai Docker web service (plan Free).
+# Pakai: Render -> New -> Blueprint -> pilih repo ini.
+services:
+  - type: web
+    name: aksara-backend
+    runtime: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: .
+    plan: free
+    healthCheckPath: /healthz
+    envVars:
+      - key: AKSARA_AUDIO_DIR
+        value: /data/aksara-audio
+      # Isi dengan URL Vercel setelah frontend di-deploy, mis. https://aksara.vercel.app
+      - key: AKSARA_CORS_ORIGIN
+        sync: false
+      # Opsional: audio untuk kata di luar kamus.
+      - key: APIPEDIA_API_KEY
+        sync: false
+      - key: GOOGLE_TRANSLATE_SCRIPT_URL
+        sync: false

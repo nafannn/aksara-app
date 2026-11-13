@@ -20,6 +20,7 @@ def make_client(tmp_path, seed=()):
             "DATABASE": str(tmp_path / "vocab.db"),
             "AUDIO_DIR": str(tmp_path),
             "APIPEDIA_API_KEY": "",
+            "APIPEDIA_VOICE": "su-ID-TutiNeural",
             "GOOGLE_TRANSLATE_API_KEY": "",
             "GOOGLE_TRANSLATE_SCRIPT_URL": "",
             "TTS_TIMEOUT": 0.1,
@@ -43,6 +44,12 @@ def post_image(client, data=PNG_1X1, name="line.png", mimetype="image/png"):
         data={"image": (BytesIO(data), name, mimetype)},
         content_type="multipart/form-data",
     )
+
+
+def test_healthz_reports_ok(tmp_path):
+    response = make_client(tmp_path).get("/healthz")
+    assert response.status_code == 200
+    assert response.json["status"] == "ok"
 
 
 def test_missing_image_returns_400(tmp_path):
@@ -125,12 +132,26 @@ def test_short_single_cluster_shows_reading_not_a_dictionary_meaning(tmp_path, m
     assert body["matched_latin"] is None
 
 
-def test_audio_url_is_null_when_cached_file_is_gone(tmp_path, monkeypatch):
+def test_bundled_audio_rescues_a_stale_cache_reference(tmp_path, monkeypatch):
     import aksara.recognize as recognizer
+    from audio_service import cache_filename
 
     monkeypatch.setattr(recognizer, "recognize", lambda image: {"aksara": "ᮘᮢᮌ", "confidence": 0.9})
     stale = ("ᮘᮢᮌ", "braga", "Nama kawasan di Bandung", "tts_hilang.mp3")
-    body = post_image(make_client(tmp_path, seed=[stale])).json
+    client = make_client(tmp_path, seed=[stale])
+    body = post_image(client).json
+    assert body["success"] is True
+    # Berkas lama hilang, tetapi audio bawaan (backend/audio_seed) menutupinya.
+    assert body["audio_url"] == f"/audio/{cache_filename('braga')}"
+    assert (tmp_path / cache_filename("braga")).is_file()
+
+
+def test_audio_url_is_null_when_no_audio_can_be_produced(tmp_path, monkeypatch):
+    import aksara.recognize as recognizer
+
+    # Tidak ada kunci APIPedia dan kata ini tidak punya audio bawaan.
+    monkeypatch.setattr(recognizer, "recognize", lambda image: {"aksara": "ᮞᮥᮛᮒ᮪", "confidence": 0.9})
+    body = post_image(make_client(tmp_path, seed=[BRAGA])).json
     assert body["success"] is True
     assert body["audio_url"] is None
 

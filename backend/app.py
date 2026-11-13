@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import os
+import shutil
 import sys
 import tempfile
 from pathlib import Path
@@ -10,18 +11,19 @@ from pathlib import Path
 from flask import Flask, jsonify, request, send_from_directory
 
 try:  # Supports both ``python -m backend.app`` and local test execution.
-    from .audio_service import synthesize_audio
+    from .audio_service import cache_filename, synthesize_audio
     from .db import connect, find_word, remember_audio
     from .google_translate import translate_sundanese_to_indonesian
     from .translator import transliterate
 except ImportError:  # pragma: no cover - exercised by the local runner
-    from audio_service import synthesize_audio
+    from audio_service import cache_filename, synthesize_audio
     from db import connect, find_word, remember_audio
     from google_translate import translate_sundanese_to_indonesian
     from translator import transliterate
 
 
 DEFAULT_MAX_BYTES = 8 * 1024 * 1024
+SEED_AUDIO_DIR = Path(__file__).resolve().parent / "audio_seed"
 
 # Modul pengenalan (`aksara`) ada di ../vision. Dengan ini PYTHONPATH tidak wajib diatur manual.
 _VISION_DIR = Path(__file__).resolve().parent.parent / "vision"
@@ -87,6 +89,29 @@ def cached_audio(filename: str | None, audio_dir: str) -> str | None:
     return path.name if path.is_file() and path.stat().st_size > 0 else None
 
 
+def install_seed_audio(target: Path, source: Path = SEED_AUDIO_DIR) -> int:
+    """Salin audio bawaan ke folder cache.
+
+    Host dengan disk ephemeral (mis. Render free) kehilangan isi cache setiap
+    restart. Berkas audio untuk kata yang sudah ada di kamus ikut dibundel ke
+    image supaya tautan audio tidak mati; suara untuk kata baru tetap dibuat
+    lewat APIPedia saat tersedia.
+    """
+    if not source.is_dir():
+        return 0
+    copied = 0
+    for item in sorted(source.glob("*.mp3")):
+        destination = target / item.name
+        if destination.exists() and destination.stat().st_size > 0:
+            continue
+        try:
+            shutil.copyfile(item, destination)
+            copied += 1
+        except OSError:
+            continue
+    return copied
+
+
 def load_env_file(path: Path) -> None:
     """Load simple KEY=value settings without overriding real environment vars."""
     if not path.exists():
@@ -127,10 +152,16 @@ def create_app(test_config: dict | None = None) -> Flask:
 
     Path(app.config["DATABASE"]).parent.mkdir(parents=True, exist_ok=True)
     app.config["AUDIO_DIR"] = str(writable_dir(Path(app.config["AUDIO_DIR"])))
+    install_seed_audio(Path(app.config["AUDIO_DIR"]))
 
     @app.errorhandler(413)
     def too_large(_error):
         return jsonify(success=False, message="Berkas terlalu besar"), 413
+
+    @app.get("/healthz")
+    def healthz():
+        """Untuk health check host (Render/Cloud Run) dan verifikasi setelah deploy."""
+        return jsonify(status="ok", model=os.path.basename(os.environ.get("AKSARA_MODEL", "aksara_crnn.keras")))
 
     @app.post("/api/recognize")
     def recognize_endpoint():
@@ -186,6 +217,12 @@ def create_app(test_config: dict | None = None) -> Flask:
             audio_file = cached_audio(
                 word.get("audio_file") if word else None, app.config["AUDIO_DIR"]
             )
+            if not audio_file:
+                # Audio bawaan memakai nama deterministik yang sama dengan TTS.
+                audio_file = cached_audio(
+                    cache_filename(translated.latin, app.config["APIPEDIA_VOICE"]),
+                    app.config["AUDIO_DIR"],
+                )
             if not audio_file:
                 audio_file = synthesize_audio(
                     translated.latin,
