@@ -133,6 +133,25 @@ tidak ada yang menjawab.
 bash scripts/demo_tunnel.sh          # mencetak https://<acak>.trycloudflare.com
 ```
 
+### Menjalankan dari laptop lain
+
+Tunnel terikat pada **kredensial**, bukan pada perangkat, jadi laptop teman bisa menyajikan domain
+yang sama asalkan punya repo, dependensi (venv Python ±1,8 GB atau image Docker 2,42 GB), dan
+`cloudflared`. Ada dua cara:
+
+| Cara | Yang disiapkan | URL |
+|---|---|---|
+| Quick Tunnel | tidak ada; cukup `cloudflared` | acak, berganti tiap sesi |
+| Tunnel bernama | salin `~/.cloudflared/<id>.json` + `config.yml` ke laptop teman | tetap: `aksara-api.<domain>` |
+
+Peringatan yang berlaku untuk keduanya:
+
+- Berkas kredensial tunnel setara kunci akun: siapa pun yang memegangnya bisa menjalankan tunnel itu.
+  Jangan di-commit dan jangan dibagikan di grup chat; Quick Tunnel menghindari ini sepenuhnya.
+- Jangan menyalakan tunnel bernama di dua mesin sekaligus — Cloudflare membagi koneksi antar instance,
+  sehingga sebagian request mendarat di mesin yang salah dan terasa lebih lambat.
+- Laptop yang menjalankan backend harus hidup dan tidak sleep, sama seperti mesin ini.
+
 Kalau frontend sudah ter-deploy di Vercel dan URL backend berubah, tidak perlu build ulang: buka
 `https://<app-vercel>/?api=https://<tunnel>/api/recognize`. Query `?api=` menimpa `VITE_API_URL` yang
 tertanam saat build (hanya http/https yang diterima).
