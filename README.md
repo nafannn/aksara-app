@@ -1,77 +1,188 @@
 # AKSARA
 
-Sistem multimedia untuk mengenali dan mempelajari Aksara Sunda dari foto plang di fasilitas publik.
-Proyek II4050 Rekayasa Sistem Multimedia, Kelompok 3 (ITB, STI).
+AKSARA adalah aplikasi web mobile untuk mengenali dan mempelajari Aksara Sunda dari foto tulisan di ruang publik.
 
-Alur: foto crop baris aksara → pengenalan aksara (Unicode) → transliterasi Latin → arti kata → audio pengucapan.
-Arsitektur: client-server mobile web application (ponsel sebagai klien, server Flask sebagai pemroses).
+Pengguna dapat mengambil atau mengunggah foto, memotong bagian tulisan, lalu melihat hasil pengenalan dalam bentuk:
 
-## Struktur repo
+- karakter Aksara Sunda;
+- transliterasi Latin;
+- penjelasan setiap gugus aksara dan rarangkén;
+- makna dalam Bahasa Indonesia;
+- audio pengucapan Bahasa Sunda; dan
+- riwayat hasil pemindaian.
+
+## Cara kerja
+
+```text
+Foto tulisan
+    ↓
+Crop satu baris aksara
+    ↓
+Model CRNN-CTC mengenali karakter Unicode Aksara Sunda
+    ↓
+Backend mentransliterasi dan mencari makna
+    ↓
+Frontend menampilkan hasil, pembelajaran karakter, dan audio
 ```
-aksara-app/
-├── README.md
-├── docs/
-│   └── api-contract.md   # kontrak API antar bagian (baca sebelum coding)
-├── vision/               # Peran A: dataset sintetis, preprocessing, model, recognize()
-├── backend/              # Peran B: API Flask, transliterator, SQLite, audio
-└── frontend/             # Peran C: UI mobile web, cropper, evaluasi pengguna
+
+## Arsitektur
+
+| Bagian | Teknologi | Peran |
+| --- | --- | --- |
+| Frontend | React + Vite | Kamera, crop foto, hasil scan, pembelajaran karakter, dan riwayat |
+| Backend | Flask + Gunicorn | API pengenalan, transliterasi, kamus, audio, dan CORS |
+| Model | TensorFlow/Keras + OpenCV | Mengenali satu baris Aksara Sunda dari gambar |
+| Penyimpanan | SQLite | Menyimpan kosakata dan metadata audio |
+| Terjemahan | Google Apps Script | Menerjemahkan kata Sunda yang belum ada di kamus |
+| Audio | APIPedia TTS | Membuat audio pengucapan Bahasa Sunda secara opsional |
+
+## Menjalankan secara lokal
+
+### Prasyarat
+
+- Python 3.12
+- Node.js dan npm
+- Git
+
+TensorFlow digunakan oleh modul vision, jadi Python 3.12 direkomendasikan untuk mengikuti environment project.
+
+### 1. Menyiapkan backend
+
+Dari root repository:
+
+```powershell
+py -3.12 -m venv .venv
+.\.venv\Scripts\Activate.ps1
+python -m pip install -r backend\requirements.txt -r vision\requirements.txt
+Copy-Item backend\.env.example backend\.env
+python -m backend.app
 ```
 
-| Folder | Pemilik | Status |
-|---|---|---|
-| `vision/` | A | Pipeline dan model baseline jalan; foto plang asli berlabel belum ada |
-| `backend/` | B | API Flask, transliterator, SQLite; skema respons sesuai `docs/api-contract.md` v0.3 |
-| `frontend/` | C | UI mobile web; terhubung ke API lewat `VITE_API_URL` |
+Backend berjalan di `http://127.0.0.1:5000`.
 
-## Coba aplikasinya (satu perintah)
+Isi `backend/.env` jika ingin mengaktifkan fitur tambahan:
 
-Backend + frontend dijalankan dari laptop, lalu dibuka lewat tunnel HTTPS:
+```env
+APIPEDIA_API_KEY=your_apipedia_key
+APIPEDIA_VOICE=su-ID-TutiNeural
+GOOGLE_TRANSLATE_SCRIPT_URL=https://script.google.com/macros/s/your_deployment_id/exec
+```
+
+API key dan file `.env` bersifat rahasia. Jangan commit file `.env` ke repository.
+
+### 2. Menyiapkan frontend
+
+Buka terminal baru dari root repository:
+
+```powershell
+cd frontend
+npm ci
+Copy-Item .env.example .env
+npm run dev
+```
+
+Frontend biasanya tersedia di `http://localhost:5173` dan menggunakan backend lokal melalui:
+
+```env
+VITE_API_URL=http://127.0.0.1:5000/api/recognize
+```
+
+Jika backend menggunakan URL publik, ganti nilai `VITE_API_URL` dengan endpoint lengkap backend tersebut.
+
+### Mode mock
+
+Untuk mencoba alur aplikasi tanpa memuat model TensorFlow:
+
+```powershell
+$env:AKSARA_MOCK="1"
+python -m backend.app
+```
+
+Hapus environment variable tersebut untuk menggunakan model asli.
+
+## Endpoint utama
+
+```http
+POST /api/recognize
+Content-Type: multipart/form-data
+```
+
+Field yang dikirim adalah `image` dalam format JPEG atau PNG. Backend mengembalikan hasil pengenalan, transliterasi, makna, detail karakter, confidence, dan `audio_url` jika audio tersedia.
+
+Dokumentasi lengkap tersedia di [docs/api-contract.md](docs/api-contract.md).
+
+## Deployment
+
+Backend dideploy sebagai Docker web service karena membutuhkan TensorFlow dan OpenCV. Konfigurasi deployment yang tersedia:
+
+- [Render Blueprint](render.yaml)
+- [Railway configuration](railway.toml)
+- [Panduan deployment lengkap](docs/deploy.md)
+
+Untuk membangun dan menjalankan container secara lokal:
 
 ```bash
-bash scripts/demo_tunnel.sh
+docker build -f backend/Dockerfile -t aksara-backend .
+docker run --rm -p 8080:8080 \
+  -e AKSARA_CORS_ORIGIN="*" \
+  aksara-backend
 ```
 
-Tunggu sampai muncul `Buka di ponsel: https://aksara-api.otwdochub.my.id`, buka URL itu di ponsel, lalu
-scan. Ctrl+C menghentikan server dan tunnel sekaligus. Skrip membaca tunnel bernama dari
-`~/.cloudflared/config.yml`, jadi tidak perlu mengingat env var; tanpa config itu ia memakai Quick Tunnel
-dengan URL acak. Setup awalnya ada di `docs/deploy.md` bagian 4.
+Frontend dapat dideploy sebagai static site. Setelah backend memiliki URL publik, set:
 
-## Persiapan
-- **Python 3.12** (TensorFlow belum mendukung 3.14). Disarankan memakai venv per folder.
-- Jangan commit `.venv/`, `node_modules/`, atau berkas `.env`.
+```env
+VITE_API_URL=https://nama-backend-kamu.example/api/recognize
+```
 
-### vision/
+### Mengganti backend tanpa build ulang
+
+Frontend mendukung override endpoint melalui query string:
+
+```text
+https://nama-frontend-kamu.example/?api=https%3A%2F%2Fnama-backend-kamu.example%2Fapi%2Frecognize
+```
+
+Fitur ini berguna untuk mengganti backend demo atau URL Cloudflare Tunnel sementara.
+
+## Struktur repository
+
+```text
+.
+├── backend/       Flask API, SQLite, transliterasi, audio, dan Dockerfile
+├── frontend/      React + Vite mobile web app
+├── vision/        preprocessing, model TensorFlow, dan recognizer
+├── docs/          kontrak API dan panduan deployment
+├── render.yaml    konfigurasi Render Blueprint
+└── railway.toml   konfigurasi Railway
+```
+
+## Pengujian
+
+Smoke test backend tanpa frontend:
+
 ```powershell
-cd vision
-uv venv --python 3.12 .venv
-.venv\Scripts\activate
-uv pip install -r requirements.txt
-python scripts/evaluate.py --synth test   # perlu dataset dulu: python scripts/make_dataset.py
+$env:AKSARA_MOCK="1"
+python -m backend.smoke_test
 ```
-Detail lengkap ada di `vision/README.md`.
 
-### backend/ memanggil vision
-Paket Python-nya bernama `aksara` dan berada di `vision/`. Dari folder `backend/`:
+Validasi frontend:
+
 ```powershell
-$env:PYTHONPATH="..\vision"            # PowerShell
-# export PYTHONPATH=../vision          # Mac/Linux
-$env:AKSARA_MOCK="1"                   # jawaban tetap, jika model belum jalan di mesin ini
+cd frontend
+npm run lint
+npm run build
 ```
-Contoh pemakaian ada di `docs/api-contract.md`.
 
-## Cara kerja bertiga (Git)
-- Sebelum mulai kerja: `git pull`
-- Setelah selesai: `git add .` → `git commit -m "pesan singkat"` → `git push`
-- Edit foldermu sendiri; perubahan di `docs/api-contract.md` harus diberi tahu ke semua.
-- Jika `git pull` menampilkan `CONFLICT`, jangan di-force; selesaikan bersama.
+## Batasan saat ini
 
-## Aturan data
-- **Foto plang asli tidak di-commit.** Simpan di folder bersama (Drive); commit hanya `vision/data/real/labels.csv`.
-- **Test set dipisah sejak awal** dan tidak dipakai untuk tuning atau pelatihan. Split berdasarkan plang, bukan berdasarkan foto (`vision/scripts/split_real.py`).
-- Tidak ada angka akurasi dari data sintetis di laporan sebagai akurasi sistem.
-- Repo ini **private**; foto ruang publik bisa memuat wajah atau plat nomor.
+- Input model harus berupa crop satu baris Aksara Sunda; deteksi otomatis dari foto plang utuh belum tersedia.
+- Model baseline terutama dilatih dan dievaluasi pada data sintetis.
+- Foto dengan tipografi dekoratif, pencahayaan buruk, atau sudut miring dapat menurunkan akurasi.
+- Audio dan terjemahan bergantung pada layanan eksternal jika kata belum tersedia secara lokal.
 
-## Dokumen terkait
-- `docs/api-contract.md`: kontrak API
-- `vision/README.md`: modul pengenalan aksara
-- `docs/deploy.md`: cara men-deploy frontend dan backend
+## Dokumentasi
+
+- [Kontrak API](docs/api-contract.md)
+- [Panduan deployment](docs/deploy.md)
+- [Dokumentasi backend](backend/README.md)
+- [Dokumentasi modul vision](vision/README.md)
