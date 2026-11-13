@@ -142,14 +142,35 @@ yang sama asalkan punya repo, dependensi (venv Python ±1,8 GB atau image Docker
 | Cara | Yang disiapkan | URL |
 |---|---|---|
 | Quick Tunnel | tidak ada; cukup `cloudflared` | acak, berganti tiap sesi |
-| Tunnel bernama | salin `~/.cloudflared/<id>.json` + `config.yml` ke laptop teman | tetap: `aksara-api.<domain>` |
+| Tunnel bernama (yang dipakai proyek ini) | salin `~/.cloudflared/config.yml` + `<id>.json` | tetap: `aksara-api.<domain>` |
 
-Peringatan yang berlaku untuk keduanya:
+Untuk tunnel bernama, dua berkas itu saja cukup — `cert.pem` tidak perlu, karena `scripts/demo_tunnel.sh`
+memanggil tunnel lewat **UUID** (nilai `tunnel:` di config), bukan lewat nama. Sudah diuji dengan
+`HOME` diarahkan ke folder kosong yang hanya berisi `config.yml` + `<id>.json`: tunnel tetap mendaftar
+empat koneksi. `cloudflared` memang mencetak satu baris
+`ERR Cannot determine default origin certificate path`, tetapi baris itu tidak fatal; ia hilang kalau
+`cert.pem` ikut disalin atau `origincert` diisi di config.
+
+Jebakan yang paling sering: baris `credentials-file:` di `config.yml` berisi **path absolut** mesin asal
+(`C:\Users\USER\.cloudflared\345cff70-….json`). Di laptop teman path itu tidak ada, jadi ubah ke lokasi
+berkas di mesinnya:
+
+```yaml
+tunnel: 345cff70-7b50-4414-b228-6d5537856a9c
+credentials-file: C:\Users\<nama-user-teman>\.cloudflared\345cff70-7b50-4414-b228-6d5537856a9c.json
+ingress:
+  - hostname: aksara-api.<domain>
+    service: http://localhost:18080
+  - service: http_status:404
+```
+
+Peringatan:
 
 - Berkas kredensial tunnel setara kunci akun: siapa pun yang memegangnya bisa menjalankan tunnel itu.
   Jangan di-commit dan jangan dibagikan di grup chat; Quick Tunnel menghindari ini sepenuhnya.
 - Jangan menyalakan tunnel bernama di dua mesin sekaligus — Cloudflare membagi koneksi antar instance,
   sehingga sebagian request mendarat di mesin yang salah dan terasa lebih lambat.
+- Port di `service:` harus sama dengan port backend di mesin itu (di proyek ini 18080).
 - Laptop yang menjalankan backend harus hidup dan tidak sleep, sama seperti mesin ini.
 
 Kalau frontend sudah ter-deploy di Vercel dan URL backend berubah, tidak perlu build ulang: buka
