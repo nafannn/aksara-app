@@ -17,3 +17,6 @@ vision/data/real/*
 vision/data/debug/
 # Model hasil eksperimen (bukan model yang dipakai backend)
 vision/models/exp_*.keras
+# Dataset sintetis hasil eksperimen resolusi / keragaman font
+vision/data64/
+vision/data_mf*/
