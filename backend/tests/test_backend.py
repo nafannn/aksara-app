@@ -9,7 +9,7 @@ PNG_1X1 = base64.b64decode(
 )
 
 
-def make_client(tmp_path, seed=()):
+def make_client(tmp_path, seed=(), **overrides):
     """App uji tanpa jaringan: kunci API dikosongkan supaya tes tidak memanggil
     Google/APIPedia dan hasilnya deterministik."""
     from db import connect
@@ -24,6 +24,7 @@ def make_client(tmp_path, seed=()):
             "GOOGLE_TRANSLATE_API_KEY": "",
             "GOOGLE_TRANSLATE_SCRIPT_URL": "",
             "TTS_TIMEOUT": 0.1,
+            **overrides,
         }
     )
     connection = connect(str(tmp_path / "vocab.db"))
@@ -50,6 +51,26 @@ def test_healthz_reports_ok(tmp_path):
     response = make_client(tmp_path).get("/healthz")
     assert response.status_code == 200
     assert response.json["status"] == "ok"
+
+
+def test_frontend_static_files_are_off_by_default(tmp_path):
+    assert make_client(tmp_path).get("/").status_code == 404
+
+
+def test_demo_mode_serves_the_spa_without_shadowing_api(tmp_path):
+    dist = tmp_path / "dist"
+    dist.mkdir()
+    (dist / "index.html").write_text("<html>AKSARA</html>", encoding="utf-8")
+    (dist / "app.js").write_text("console.log(1)", encoding="utf-8")
+    client = make_client(tmp_path, SERVE_FRONTEND=True, FRONTEND_DIR=str(dist))
+
+    assert client.get("/").data == b"<html>AKSARA</html>"
+    assert client.get("/app.js").data == b"console.log(1)"
+    # Rute dalam SPA tetap dilayani index.html.
+    assert client.get("/hasil/123").data == b"<html>AKSARA</html>"
+    # API dan audio tidak boleh tertutup rute catch-all.
+    assert client.post("/api/recognize").status_code == 400
+    assert client.get("/audio/tidak-ada.mp3").status_code == 404
 
 
 def test_missing_image_returns_400(tmp_path):

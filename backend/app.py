@@ -24,6 +24,7 @@ except ImportError:  # pragma: no cover - exercised by the local runner
 
 DEFAULT_MAX_BYTES = 8 * 1024 * 1024
 SEED_AUDIO_DIR = Path(__file__).resolve().parent / "audio_seed"
+FRONTEND_DIST = Path(__file__).resolve().parent.parent / "frontend" / "dist"
 
 # Modul pengenalan (`aksara`) ada di ../vision. Dengan ini PYTHONPATH tidak wajib diatur manual.
 _VISION_DIR = Path(__file__).resolve().parent.parent / "vision"
@@ -137,6 +138,8 @@ def create_app(test_config: dict | None = None) -> Flask:
         GOOGLE_TRANSLATE_SCRIPT_URL=os.getenv("GOOGLE_TRANSLATE_SCRIPT_URL", ""),
         GOOGLE_TRANSLATE_API_KEY=os.getenv("GOOGLE_TRANSLATE_API_KEY", ""),
         TTS_TIMEOUT=float(os.getenv("AKSARA_TTS_TIMEOUT", "5")),
+        SERVE_FRONTEND=os.getenv("AKSARA_SERVE_FRONTEND", "") == "1",
+        FRONTEND_DIR=os.getenv("AKSARA_FRONTEND_DIR", str(FRONTEND_DIST)),
     )
     if test_config:
         app.config.update(test_config)
@@ -252,6 +255,21 @@ def create_app(test_config: dict | None = None) -> Flask:
     @app.get("/audio/<path:filename>")
     def audio(filename: str):
         return send_from_directory(app.config["AUDIO_DIR"], filename)
+
+    if app.config["SERVE_FRONTEND"]:
+        frontend_dir = Path(app.config["FRONTEND_DIR"]).resolve()
+        reserved = ("api/", "audio/", "healthz")
+
+        @app.get("/")
+        @app.get("/<path:path>")
+        def frontend(path: str = ""):
+            """Sajikan build frontend dari origin yang sama (mode demo satu URL)."""
+            if path.startswith(reserved):
+                return jsonify(success=False, message="Bukan bagian frontend"), 404
+            target = (frontend_dir / path).resolve() if path else None
+            if target and target.is_file() and frontend_dir in target.parents:
+                return send_from_directory(frontend_dir, path)
+            return send_from_directory(frontend_dir, "index.html")
 
     return app
 

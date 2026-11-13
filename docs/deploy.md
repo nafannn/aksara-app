@@ -57,6 +57,7 @@ Variabel lingkungan:
 | `GOOGLE_TRANSLATE_SCRIPT_URL` | Arti kata (opsional) |
 | `AKSARA_AUDIO_DIR` | Folder cache audio (default `backend/audio`; isi `/data/aksara-audio` saat memakai volume Docker) |
 | `AKSARA_TTS_TIMEOUT` | Batas tunggu panggilan TTS dalam detik (default 5). Lewat batas → `audio_url: null`, pengenalan tetap berhasil |
+| `AKSARA_SERVE_FRONTEND` | `1` = backend juga menyajikan `frontend/dist` (mode demo satu URL, lihat bagian 4) |
 | `PORT` | Port (default 8080; beberapa host mengatur sendiri) |
 
 Host wajib menyediakan **HTTPS**: kamera di ponsel memblokir permintaan HTTP campuran.
@@ -96,21 +97,32 @@ tanpa penjelasan. Kalau kamu atau anggota tim punya kartu yang lolos:
 Karakter Render free: RAM 512 MB (puncak terukur 237 MB), **tidur setelah 15 menit tanpa trafik**
 (~1 menit untuk bangun), disk ephemeral, 750 jam instance/bulan.
 
-## 4. Cadangan demo: Cloudflare Quick Tunnel (tanpa akun, tanpa kartu)
+## 4. Demo tanpa host: satu URL dari laptop (tanpa akun, tanpa kartu)
 
-Kalau tidak ada host yang bisa dipakai saat sidang, jalankan backend di laptop dan buka lewat tunnel HTTPS:
+Kalau semua host gratis menolak (kartu, kredit habis), sidang tetap bisa jalan dari laptop:
 
 ```bash
-# terminal 1 — backend
+bash scripts/demo_tunnel.sh
+```
+
+Skrip itu: build frontend dengan API relatif → jalankan backend yang juga menyajikan `frontend/dist`
+(`AKSARA_SERVE_FRONTEND=1`) → buka Cloudflare Quick Tunnel → mencetak satu URL HTTPS. Buka URL itu di
+ponsel; kamera jalan karena HTTPS, dan API-nya ada di origin yang sama sehingga tidak ada CORS dan tidak
+ada `VITE_API_URL` yang perlu diubah kalau URL berganti. Ctrl+C menghentikan server dan tunnel sekaligus.
+
+Butuh `cloudflared` di PATH (`cloudflared --version`) dan port `AKSARA_DEMO_PORT` (default 18080) yang bebas.
+Batasannya: laptop harus hidup dan tidak sleep selama sesi, URL berganti setiap kali skrip dijalankan, dan
+tunnel ini untuk demo — Cloudflare sendiri menyebut Quick Tunnel bukan untuk produksi.
+
+Cara manual (mis. backend sudah berjalan di Docker):
+
+```bash
 docker run -p 8080:8080 -e AKSARA_CORS_ORIGIN="*" aksara-backend
-# terminal 2 — tunnel
 cloudflared tunnel --url http://localhost:8080
 ```
 
-`cloudflared` mencetak URL `https://xxx.trycloudflare.com` yang langsung bisa dibuka ponsel (HTTPS, jadi
-kamera jalan). Tanpa akun dan tanpa biaya. Dua batasan: URL **berubah setiap kali** tunnel dijalankan, dan
-laptop harus tetap hidup selama dipakai — jadi `VITE_API_URL` di Vercel perlu diperbarui lalu redeploy
-setiap kali URL berganti. Untuk sidang, jalankan tunnel lebih dulu, perbarui env, baru redeploy.
+Bedanya, di jalur manual frontend tidak ikut disajikan backend, jadi frontend (di Vercel) harus menunjuk
+ke URL tunnel itu dan perlu redeploy setiap kali URL berubah.
 
 ## 5. Status host lain (dicek November 2026, bisa berubah)
 
