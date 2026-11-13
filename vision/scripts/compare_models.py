@@ -22,11 +22,17 @@ from aksara.model import greedy_decode  # noqa: E402
 from aksara.preprocess import preprocess  # noqa: E402
 
 
+def read_image(path):
+    """cv2.imread gagal pada nama berkas non-ASCII di Windows."""
+    data = np.fromfile(path, dtype=np.uint8)
+    return cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
+
+
 def load_real(csv_path):
     base = os.path.dirname(csv_path)
     xs, ys = [], []
     for row in csv.DictReader(open(csv_path, encoding="utf-8")):
-        img = cv2.imread(os.path.join(base, row["file"]))
+        img = read_image(os.path.join(base, row["file"]))
         if img is None:
             print("lewat (gambar tidak ada):", row["file"])
             continue

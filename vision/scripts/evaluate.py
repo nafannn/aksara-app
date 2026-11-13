@@ -11,6 +11,12 @@ from aksara import charset
 from aksara.model import greedy_decode
 from aksara.preprocess import preprocess
 
+
+def read_image(path):
+    """cv2.imread gagal pada nama berkas non-ASCII di Windows (mis. paréntah.png)."""
+    data = np.fromfile(path, dtype=np.uint8)
+    return cv2.imdecode(data, cv2.IMREAD_COLOR) if data.size else None
+
 ap = argparse.ArgumentParser()
 ap.add_argument("--model", default="models/aksara_crnn.keras")
 ap.add_argument("--synth", default=None)
@@ -25,7 +31,7 @@ if a.synth:
 else:
     base = os.path.dirname(a.real_csv); X, Y, K = [], [], []
     for r in csv.DictReader(open(a.real_csv, encoding="utf-8")):
-        im = cv2.imread(os.path.join(base, r["file"]))
+        im = read_image(os.path.join(base, r["file"]))
         if im is not None:
             X.append(preprocess(im)); Y.append(r["label"]); K.append(r.get("kondisi", ""))
     X = np.stack(X)
