@@ -43,15 +43,24 @@ curl -fsS --max-time 5 "http://127.0.0.1:$PORT/healthz" >/dev/null || {
 }
 
 echo "== 3/3 buka tunnel publik =="
-if [[ -n "${AKSARA_TUNNEL:-}" ]]; then
-  # Tunnel bernama: URL tetap (mis. https://aksara-api.otwdochub.my.id).
-  cloudflared tunnel run "$AKSARA_TUNNEL" >"${TMPDIR:-/tmp}/aksara-tunnel.log" 2>&1 &
-  TUNNEL_PID=$!
-  URL="${AKSARA_PUBLIC_URL:-}"
-  if [[ -z "$URL" ]]; then
-    echo "AKSARA_TUNNEL diset tapi AKSARA_PUBLIC_URL kosong; isi hostname tetapnya." >&2
-    exit 1
+# Tunnel bernama diambil dari config cloudflared kalau env tidak diisi, supaya
+# cukup `bash scripts/demo_tunnel.sh` untuk demo sehari-hari.
+CONFIG="${AKSARA_CLOUDFLARED_CONFIG:-$HOME/.cloudflared/config.yml}"
+NAMED_TUNNEL="${AKSARA_TUNNEL:-}"
+PUBLIC_URL="${AKSARA_PUBLIC_URL:-}"
+if [[ -z "$NAMED_TUNNEL" && -f "$CONFIG" ]]; then
+  NAMED_TUNNEL="$(grep -E '^tunnel:' "$CONFIG" | head -1 | sed -E 's/^tunnel:[[:space:]]*//' || true)"
+  if [[ -z "$PUBLIC_URL" ]]; then
+    HOST="$(grep -E '^[[:space:]]*-[[:space:]]*hostname:' "$CONFIG" | head -1 | sed -E 's/.*hostname:[[:space:]]*//' || true)"
+    [[ -n "$HOST" ]] && PUBLIC_URL="https://$HOST"
   fi
+fi
+
+if [[ -n "$NAMED_TUNNEL" && -n "$PUBLIC_URL" ]]; then
+  echo "   tunnel bernama: $NAMED_TUNNEL -> $PUBLIC_URL"
+  cloudflared tunnel run "$NAMED_TUNNEL" >"${TMPDIR:-/tmp}/aksara-tunnel.log" 2>&1 &
+  TUNNEL_PID=$!
+  URL="$PUBLIC_URL"
 else
   cloudflared tunnel --url "http://localhost:$PORT" --no-autoupdate >"${TMPDIR:-/tmp}/aksara-tunnel.log" 2>&1 &
   TUNNEL_PID=$!

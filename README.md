@@ -23,6 +23,19 @@ aksara-app/
 | `backend/` | B | API Flask, transliterator, SQLite; skema respons sesuai `docs/api-contract.md` v0.3 |
 | `frontend/` | C | UI mobile web; terhubung ke API lewat `VITE_API_URL` |
 
+## Coba aplikasinya (satu perintah)
+
+Backend + frontend dijalankan dari laptop, lalu dibuka lewat tunnel HTTPS:
+
+```bash
+bash scripts/demo_tunnel.sh
+```
+
+Tunggu sampai muncul `Buka di ponsel: https://aksara-api.otwdochub.my.id`, buka URL itu di ponsel, lalu
+scan. Ctrl+C menghentikan server dan tunnel sekaligus. Skrip membaca tunnel bernama dari
+`~/.cloudflared/config.yml`, jadi tidak perlu mengingat env var; tanpa config itu ia memakai Quick Tunnel
+dengan URL acak. Setup awalnya ada di `docs/deploy.md` bagian 4.
+
 ## Persiapan
 - **Python 3.12** (TensorFlow belum mendukung 3.14). Disarankan memakai venv per folder.
 - Jangan commit `.venv/`, `node_modules/`, atau berkas `.env`.
