@@ -177,11 +177,12 @@ disebut lain, lalu diuji pada 31 foto asli dan 10 plang yang tak pernah dilihat.
 
 | Percobaan | Sintetis (n=1000) | Foto asli (n=31) | **Plang (n=10)** |
 |---|---|---|---|
-| satu font, augmentasi basic | **0,1678** | **0,7918** | 0,9062 |
+| satu font, augmentasi basic | 0,1678 | **0,7918** | 0,9062 |
 | satu font, augmentasi strong | 0,2023 | 0,8601 | **0,8750** |
-| empat weight font, basic | 0,1787 | 0,8635 | 1,0078 |
+| empat weight font, basic (3.000) | 0,1787 | 0,8635 | 1,0078 |
 | kanvas 64×320, basic | 0,1941 | 0,8737 | 1,0625 |
-| model produksi (12.000 sintetis) | 0,0534 | 0,8294 | 1,0625 |
+| empat weight font, 12.000 gambar | **0,0373** | 0,8123 | 1,0156 |
+| model produksi (12.000, satu font) | 0,0534 | 0,8294 | 1,0625 |
 
 Yang boleh disimpulkan:
 
@@ -192,9 +193,11 @@ Yang boleh disimpulkan:
    Kanvas 64×320 (4× piksel), empat weight font, dan augmentasi strong semuanya
    membagi anggaran 3.000 gambar ke lebih banyak variasi — model jadi kurang terlatih
    (loss akhir 2,85 di 4-font vs 0,25 di satu font).
-3. **Menambah jumlah sintetis tidak otomatis menolong foto.** Model 12.000 gambar
-   (CER sintetis 0,0534 — terbaik di domainnya) justru tidak lebih baik pada foto asli
-   (0,8294) dibanding model 3.000 gambar (0,7918).
+3. **Volume sintetis akhirnya menolong domain sintetis, bukan foto.** Empat font × 12.000
+   gambar memberi CER sintetis terbaik yang pernah dicapai (0,0373) dan foto asli 0,8123,
+   tetapi plang tetap 1,0156 — angka yang sama dengan model satu font 12.000 (1,0625)
+   dalam batas derau. Artinya kemampuan sintetis sudah **jenuh**: menambah data sintetis
+   tidak lagi menggerakkan foto.
 4. Kesimpulan keseluruhan: model **kekurangan contoh pada gaya target**, bukan
    kekurangan resep. Variasi sintetis hanya berguna bila volumenya ikut naik, dan
    tetap tidak menggantikan contoh plang asli.
