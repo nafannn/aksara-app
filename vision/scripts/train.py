@@ -2,7 +2,7 @@
   python scripts/train.py --epochs 20
   python scripts/train.py --epochs 8 --init models/aksara_crnn.keras --real_csv data/real/train.csv --lr 3e-4   # fine-tune foto asli
 """
-import argparse, csv, os, sys, time
+import argparse, csv, os, random, sys, time
 import numpy as np, tensorflow as tf, cv2
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from aksara import charset, config
@@ -20,6 +20,9 @@ ap.add_argument("--real_csv", default=None, help="CSV (file,label,sign_id) foto 
 ap.add_argument("--real_repeat", type=int, default=5, help="oversampling data asli")
 ap.add_argument("--max_len", type=int, default=36)
 ap.add_argument("--limit", type=int, default=0, help="batasi jumlah sampel train (debug)")
+ap.add_argument("--augment", choices=["basic", "strong"], default="basic",
+                help="basic: jitter kecerahan saja; strong: tambah erosi/dilasi stroke, blur, "
+                     "skala horizontal, dan noise untuk meniru tipografi plang yang dekoratif")
 ap.add_argument("--time_budget_min", type=float, default=0, help="berhenti setelah N menit (0=tanpa batas)")
 a = ap.parse_args()
 tf.random.set_seed(config.SEED); np.random.seed(config.SEED)
@@ -82,6 +85,46 @@ def prep(xb):
     return (xb.astype(np.float32) / 255.0)[..., None]
 
 
+def _rescale_width(img, factor):
+    """Ubah lebar citra (meniru huruf condensed/lebar) lalu pad ke lebar asli."""
+    h, w = img.shape
+    new_w = max(8, int(round(w * factor)))
+    out = np.full((h, w), int(np.median(img)), dtype=np.uint8)
+    resized = cv2.resize(img, (min(new_w, w), h), interpolation=cv2.INTER_AREA)
+    out[:, :resized.shape[1]] = resized
+    return out
+
+
+def augment_strong(batch, rng):
+    """Augmentasi yang menargetkan selisih tipografi: ketebalan stroke, tepi kabur,
+    proporsi huruf, dan noise sensor. Diterapkan pada citra uint8 sebelum normalisasi."""
+    k_dilate = np.ones((2, 2), np.uint8)
+    out = []
+    for img in batch:
+        if rng.random() < 0.40:                      # stroke lebih tebal / lebih tipis
+            img = cv2.dilate(img, k_dilate) if rng.random() < 0.5 else cv2.erode(img, k_dilate)
+        if rng.random() < 0.30:                      # tepi tidak tajam (cetak plang)
+            img = cv2.GaussianBlur(img, (0, 0), float(rng.uniform(0.4, 1.2)))
+        if rng.random() < 0.30:                      # huruf condensed / lebar
+            img = _rescale_width(img, float(rng.uniform(0.85, 1.15)))
+        if rng.random() < 0.20:                      # noise
+            sigma = float(rng.uniform(3, 12))
+            noise = np.random.normal(0, sigma, img.shape)
+            img = np.clip(img.astype(np.float32) + noise, 0, 255).astype(np.uint8)
+        out.append(img)
+    return np.stack(out)
+
+
+def make_batch(xtr, idx, rng, strong):
+    xb = xtr[idx]
+    if strong:
+        xb = augment_strong(xb, rng)
+    xb = prep(xb)
+    xb = np.clip(xb * np.random.uniform(0.8, 1.2, (len(idx), 1, 1, 1)) +
+                 np.random.uniform(-0.08, 0.08, (len(idx), 1, 1, 1)), 0, 1).astype(np.float32)
+    return xb
+
+
 def evaluate(x, y, bs=128):
     hyp = []
     for i in range(0, len(x), bs):
@@ -91,13 +134,12 @@ def evaluate(x, y, bs=128):
 
 os.makedirs(os.path.dirname(a.out), exist_ok=True)
 best, t0 = 9.9, time.time()
+aug_rng = random.Random(config.SEED)
 for ep in range(1, a.epochs + 1):
     idx = np.random.permutation(len(xtr)); losses = []
     for s in range(steps):
         b = idx[s * a.batch:(s + 1) * a.batch]
-        # augmentasi ringan saat training: jitter brightness/kontras
-        xb = prep(xtr[b]); xb = np.clip(xb * np.random.uniform(0.8, 1.2, (len(b), 1, 1, 1)) +
-                                       np.random.uniform(-0.08, 0.08, (len(b), 1, 1, 1)), 0, 1).astype(np.float32)
+        xb = make_batch(xtr, b, aug_rng, a.augment == "strong")
         losses.append(float(train_step(xb, lab_tr[b], len_tr[b])))
     vc, vw = evaluate(xva, yva)
     print(f"epoch {ep}/{a.epochs} loss={np.mean(losses):.3f} val_CER={vc:.4f} val_wordacc={vw:.4f} "

@@ -15,3 +15,5 @@ vision/data/real/*
 !vision/data/real/labels.csv
 # Keluaran diagnosa scripts/debug_one.py
 vision/data/debug/
+# Model hasil eksperimen (bukan model yang dipakai backend)
+vision/models/exp_*.keras

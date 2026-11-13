@@ -88,6 +88,31 @@ ambang tolak: satu sampel yang tepat bernilai 0,948, tetapi sampel salah ada di 
 `n = 6` hanya cukup untuk menunjukkan arah, bukan untuk menyimpulkan akurasi sistem.
 Angka ini adalah baseline "sebelum", bukan hasil akhir.
 
+## Eksperimen augmentasi (20 epoch, 3000 gambar sintetis)
+
+Dua model dilatih dengan resep identik (3000 train / 300 val, 20 epoch, lr 2e-3,
+seed sama) — bedanya hanya augmentasi:
+
+| Model | Augmentasi | CER sintetis-test | Kata sintetis | CER foto asli (n=6) |
+|---|---|---|---|---|
+| `aksara_crnn.keras` | (dataset lama, ±12.000 gambar) | **0,0534** | 0,773 | 0,9481 |
+| `exp_basic.keras` | jitter kecerahan saja | 0,1678 | 0,478 | 0,7922 |
+| `exp_strong.keras` | + erosi/dilasi stroke, blur, skala horizontal, noise | 0,2023 | 0,370 | **0,7532** |
+
+Kesimpulan:
+
+1. **Augmentasi tipografi benar-benar membantu foto asli**, dari CER 0,7922 ke 0,7532
+   pada dataset dan epoch yang sama. Efeknya konsisten, bukan kebetulan.
+2. **Harganya nyata**: CER sintetis naik 0,1678 → 0,2023. Model jadi kurang jago pada
+   font yang dipakai untuk membuat data latih.
+3. **Belum cukup.** CER 0,75 pada foto asli tetap tidak terpakai; akurasi kata tetap 1/6.
+   Augmentasi tidak bisa menggantikan data asli.
+4. Model lama unggul di sintetis (0,0534) karena dilatih dengan jauh lebih banyak gambar,
+   tetapi paling buruk di foto asli (0,9481) — indikasi kuat overfit ke Noto Sans Sundanese.
+
+Dua batas yang terlihat dari eksperimen ini: ukuran kanvas 32×192 (detail rarangkén hilang
+pada kata 12+ gugus) dan volume data. Keduanya perlu diubah bersama, bukan salah satu saja.
+
 ## Status
 
 Per November 2026: 5 sumber berbeda (Cimanuk, Bahureksa, Braga, Banda, frasa Cilaki) dan 6
