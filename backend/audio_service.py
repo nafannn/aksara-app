@@ -18,7 +18,7 @@ def synthesize_audio(
     audio_dir: str | Path,
     api_key: str | None,
     voice: str = "su-ID-TutiNeural",
-    timeout: float = 20.0,
+    timeout: float = 5.0,
 ) -> str | None:
     """Generate and cache one Sundanese MP3, returning its filename."""
     normalized = text.strip()

@@ -1,6 +1,6 @@
 # Kontrak API AKSARA
 
-Versi: **0.3 (DRAFT)**
+Versi: **0.4 (DRAFT)**
 **Keputusan: skema respons mengikuti frontend** (`frontend/src/services/result.js`). Backend menyesuaikan, frontend tidak diubah.
 Pemilik keputusan akhir: B. Reviewer: A dan C. Perubahan harus diumumkan ke semua anggota.
 
@@ -21,6 +21,8 @@ Mengenali satu baris aksara dari gambar, lalu mengembalikan transliterasi, arti,
   "aksara": "ᮘᮔ᮪ᮓᮥᮀ",
   "latin": "Bandung",
   "meaning": "Nama kota di Jawa Barat",
+  "meaning_source": "kamus",
+  "matched_latin": null,
   "audio_url": "/audio/bandung.mp3",
   "character_details": [
     {"aksara": "ᮘ",  "reading": "ba", "category": "Aksara dasar",
@@ -42,11 +44,27 @@ Mengenali satu baris aksara dari gambar, lalu mengembalikan transliterasi, arti,
 | `aksara` | string | **A** | Hasil pengenalan. Hanya berisi karakter U+1B80–U+1BBF dan spasi. UTF-8 |
 | `latin` | string atau null | B | Hasil transliterasi. Kapitalisasi bebas; UI menampilkan apa adanya |
 | `meaning` | string atau null | B | Arti dari leksikon; `null` jika kata tidak ada di leksikon |
+| `meaning_source` | string atau null | B | Asal `meaning`: `"kamus"`, `"mirip"`, `"terjemahan"`, `"bacaan"`, atau `null`. Lihat "Asal makna" di bawah |
+| `matched_latin` | string atau null | B | Hanya terisi saat `meaning_source: "mirip"`: kata kamus yang dianggap terdekat |
 | `audio_url` | string atau null | B | Path relatif atau URL http(s) ke audio; `null` jika tidak ada |
 | `character_details` | array | B | Pemecahan per **gugus aksara** (aksara dasar + rarangkén yang menempel), urut kiri ke kanan |
 | `confidence` | number 0–1, *opsional* | **A** | Satu nilai per baris. **Tidak dibaca frontend saat ini**; boleh dikirim untuk dipakai nanti |
 
 Isi tiap elemen `character_details`: `aksara` (gugus, mis. `ᮓᮥ`), `reading` (cara baca, mis. `du`), `category` (jenis, mis. "Rarangkén panyecek"), `explanation` (penjelasan singkat untuk pembelajar).
+
+### Asal makna (`meaning_source`)
+
+`meaning` tidak boleh tampil seolah selalu berasal dari kamus. Nilai yang mungkin:
+
+| Nilai | Arti | Yang harus dilakukan UI |
+|---|---|---|
+| `kamus` | Cocok persis dengan entri kamus (aksara atau latin) | Tampilkan makna apa adanya |
+| `mirip` | Tidak ada di kamus; diambil dari kata terdekat (`matched_latin`, ambang kemiripan 0,75 dan panjang ≥ 4 huruf) | **Wajib menandai** bahwa ini kata terdekat, bukan makna pasti |
+| `terjemahan` | Hasil terjemahan otomatis Google | Tandai sebagai terjemahan mesin |
+| `bacaan` | Satu gugus aksara; `meaning` berisi bacaannya, bukan arti kata | Tandai sebagai bacaan |
+| `null` | Tidak ada makna | Tampilkan "Makna belum tersedia dalam kamus." |
+
+Pencocokan persis selalu menang atas kemiripan. Kata di bawah 4 huruf tidak pernah dicocokkan secara mirip: nama jalan yang salah lebih menyesatkan daripada tidak ada makna.
 
 **Kasus yang perlu ditangani backend**
 
@@ -54,6 +72,7 @@ Isi tiap elemen `character_details`: `aksara` (gugus, mis. `ᮓᮥ`), `reading` 
 |---|---|
 | Dikenali, ada di leksikon | `success: true`, semua field terisi |
 | Dikenali, **tidak ada di leksikon** | `success: true`, `aksara`, `latin`, `character_details` terisi; `meaning` dan `audio_url` = `null`. UI menampilkan "Makna belum tersedia dalam kamus." |
+| Dikenali, hanya **mirip** kata kamus | `success: true`, `meaning` terisi, `meaning_source: "mirip"`, `matched_latin` berisi kata terdekat. UI wajib menandai bahwa makna berasal dari kata terdekat |
 | **Tidak dikenali** (model tidak menghasilkan teks, atau gambar tak bisa diproses) | **HTTP 200**, `success: false`, `aksara: ""`, field lain `null` atau `[]`. UI menampilkan "Aksara belum berhasil dikenali. Coba foto yang lebih jelas." |
 
 Tidak ada field `status`: perbedaan kasus cukup dibaca dari `success` dan `meaning`.
@@ -73,6 +92,8 @@ Body: `{"success": false, "message": "..."}`. Frontend menampilkan pesan generik
 Mengembalikan berkas audio untuk `audio_url`. Format: *diputuskan bersama* (usulan: MP3).
 Frontend meresolusi `audio_url` relatif terhadap URL respons API, sehingga path relatif seperti `/audio/bandung.mp3` mengarah ke server backend.
 
+`audio_url` hanya diisi kalau berkasnya benar-benar ada di folder cache. Nama berkas deterministik (`tts_<sha256 20 karakter>.mp3` dari voice + teks), jadi tautan tetap sama antar restart **asalkan folder cache persisten** (volume Docker, lihat `docs/deploy.md`). Kalau berkas hilang, backend mengembalikan `null` dan UI menampilkan tombol coba lagi, bukan tautan mati.
+
 ## Catatan untuk B (backend)
 
 ```python
@@ -91,7 +112,7 @@ hasil = recognize(img)          # {"aksara": str, "confidence": float}
 - **Riwayat di frontend** hanya menyimpan hasil jika `success === true`, `aksara` hanya berisi karakter U+1B80–U+1BBF dan spasi, dan `latin` tidak kosong. Hasil dengan `meaning: null` tetap tersimpan selama `latin` terisi.
 
 ## Catatan untuk C (frontend)
-- Tidak ada perubahan wajib. `normalizeResult()` sudah membaca semua field di atas dan mengabaikan field yang tidak dikenal (`confidence`).
+- Tidak ada perubahan wajib. `normalizeResult()` sudah membaca semua field di atas dan mengabaikan field yang tidak dikenal (`confidence`). `meaning_source` hanya diterima untuk nilai yang dikenal (`kamus`, `mirip`, `terjemahan`, `bacaan`); nilai lain dijadikan `null` supaya tebakan tidak tampil sebagai fakta.
 - Halaman hasil sudah menangani `latin`, `meaning`, dan `audio_url` bernilai `null`.
 
 ## Catatan penting

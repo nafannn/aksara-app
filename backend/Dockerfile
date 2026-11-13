@@ -5,7 +5,7 @@ WORKDIR /app
 ENV PYTHONUNBUFFERED=1 \
     TF_CPP_MIN_LOG_LEVEL=2 \
     TF_ENABLE_ONEDNN_OPTS=0 \
-    AKSARA_AUDIO_DIR=/tmp/aksara_audio \
+    AKSARA_AUDIO_DIR=/data/aksara-audio \
     PORT=8080
 
 RUN apt-get update && apt-get install -y --no-install-recommends libglib2.0-0 \

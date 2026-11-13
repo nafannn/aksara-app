@@ -33,6 +33,21 @@ $env:APIPEDIA_VOICE="su-ID-TutiNeural"
 daftar voice APIPedia. Jika key belum diset atau API gagal, pengenalan tetap
 berhasil dan `audio_url` bernilai `null`.
 
+Nama berkas deterministik (`tts_<sha256>.mp3` dari voice + teks), jadi cache boleh permanen. Isi
+seluruh kamus sekali agar pengguna tidak menunggu TTS:
+
+```powershell
+$env:APIPEDIA_API_KEY="apk_isi_dengan_key_kamu"
+python -m backend.pregenerate_audio
+```
+
+Skrip aman diulang: berkas yang sudah ada dilewati, dan kata yang gagal (mis. kena rate limit APIPedia)
+cukup dijalankan ulang dengan perintah yang sama.
+
+`AKSARA_TTS_TIMEOUT` (default 5 detik) membatasi lamanya permintaan menunggu APIPedia; lewat batas
+tersebut pengenalan tetap berhasil dengan `audio_url: null`. Backend hanya mengirim `audio_url` kalau
+berkasnya benar-benar ada, jadi tautan mati tidak pernah dikirim ke frontend.
+
 ## Makna Bahasa Sunda (Google Apps Script)
 
 Backend memanggil Google Apps Script melalui `POST` dengan body
@@ -40,6 +55,11 @@ Backend memanggil Google Apps Script melalui `POST` dengan body
 `GOOGLE_TRANSLATE_SCRIPT_URL` di `backend/.env`, lalu restart backend. Entri
 lokal seperti nama jalan Bandung tetap memakai makna lokal; Google dipakai
 untuk kata yang belum ada di database.
+
+Respons menandai asal makna lewat `meaning_source`: `kamus` (cocok persis), `mirip` (kata terdekat,
+disertai `matched_latin`), `terjemahan` (Google), `bacaan` (satu gugus aksara), atau `null`. Frontend
+wajib membedakan `mirip` dari `kamus` supaya tebakan tidak tampil sebagai makna pasti. Kata di bawah
+4 huruf tidak pernah dicocokkan secara mirip.
 
 `GOOGLE_TRANSLATE_API_KEY` tetap didukung sebagai fallback jika Apps Script
 tidak tersedia.
@@ -104,3 +124,4 @@ Variabel lingkungan tambahan:
   sementara jika folder itu tidak bisa ditulis).
 - `AKSARA_CORS_ORIGIN`: origin frontend yang diizinkan.
 - `AKSARA_MAX_UPLOAD_BYTES`: batas ukuran upload (default 8 MB).
+- `AKSARA_TTS_TIMEOUT`: batas tunggu TTS dalam detik (default 5).

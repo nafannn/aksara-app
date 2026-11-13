@@ -11,12 +11,12 @@ from flask import Flask, jsonify, request, send_from_directory
 
 try:  # Supports both ``python -m backend.app`` and local test execution.
     from .audio_service import synthesize_audio
-    from .db import connect, find_word
+    from .db import connect, find_word, remember_audio
     from .google_translate import translate_sundanese_to_indonesian
     from .translator import transliterate
 except ImportError:  # pragma: no cover - exercised by the local runner
     from audio_service import synthesize_audio
-    from db import connect, find_word
+    from db import connect, find_word, remember_audio
     from google_translate import translate_sundanese_to_indonesian
     from translator import transliterate
 
@@ -57,6 +57,36 @@ def character_details(chars: list[dict]) -> list[dict]:
     ]
 
 
+def resolve_meaning(
+    word: dict | None,
+    latin: str,
+    is_single_cluster: bool,
+    google_key: str,
+    google_script_url: str,
+) -> tuple[str | None, str | None, str | None]:
+    """Tentukan makna beserta asalnya: kamus, mirip, terjemahan, atau bacaan.
+
+    ``mirip`` wajib dibedakan dari ``kamus``: tebakan kemiripan tidak boleh
+    tampil sebagai makna pasti ("aksara ini berarti nama jalan X").
+    """
+    if word and word.get("meaning"):
+        exact = word.get("match") == "exact"
+        return word["meaning"], ("kamus" if exact else "mirip"), (None if exact else word.get("latin"))
+    if is_single_cluster:
+        # Satu gugus: tidak ada kata yang bisa dicari, jadi tampilkan bacaannya saja.
+        return latin, "bacaan", None
+    translated = translate_sundanese_to_indonesian(latin, google_key, google_script_url)
+    return (translated, "terjemahan", None) if translated else (None, None, None)
+
+
+def cached_audio(filename: str | None, audio_dir: str) -> str | None:
+    """Nama berkas audio yang benar-benar ada di disk (tautan mati => None)."""
+    if not filename:
+        return None
+    path = Path(audio_dir) / Path(filename).name
+    return path.name if path.is_file() and path.stat().st_size > 0 else None
+
+
 def load_env_file(path: Path) -> None:
     """Load simple KEY=value settings without overriding real environment vars."""
     if not path.exists():
@@ -81,6 +111,7 @@ def create_app(test_config: dict | None = None) -> Flask:
         APIPEDIA_VOICE=os.getenv("APIPEDIA_VOICE", "su-ID-TutiNeural"),
         GOOGLE_TRANSLATE_SCRIPT_URL=os.getenv("GOOGLE_TRANSLATE_SCRIPT_URL", ""),
         GOOGLE_TRANSLATE_API_KEY=os.getenv("GOOGLE_TRANSLATE_API_KEY", ""),
+        TTS_TIMEOUT=float(os.getenv("AKSARA_TTS_TIMEOUT", "5")),
     )
     if test_config:
         app.config.update(test_config)
@@ -129,43 +160,53 @@ def create_app(test_config: dict | None = None) -> Flask:
         aksara = result.get("aksara", "")
         confidence = float(result.get("confidence", 0.0))
         if not aksara.strip():
-            return jsonify(success=False, aksara="", latin=None, meaning=None, audio_url=None, character_details=[], confidence=confidence)
+            return jsonify(
+                success=False,
+                aksara="",
+                latin=None,
+                meaning=None,
+                meaning_source=None,
+                matched_latin=None,
+                audio_url=None,
+                character_details=[],
+                confidence=confidence,
+            )
 
         translated = transliterate(aksara)
         connection = connect(app.config["DATABASE"])
         try:
             word = find_word(connection, aksara, translated.latin)
+            meaning, meaning_source, matched_latin = resolve_meaning(
+                word,
+                translated.latin,
+                len(translated.chars) <= 1,
+                app.config["GOOGLE_TRANSLATE_API_KEY"],
+                app.config["GOOGLE_TRANSLATE_SCRIPT_URL"],
+            )
+            audio_file = cached_audio(
+                word.get("audio_file") if word else None, app.config["AUDIO_DIR"]
+            )
+            if not audio_file:
+                audio_file = synthesize_audio(
+                    translated.latin,
+                    app.config["AUDIO_DIR"],
+                    app.config["APIPEDIA_API_KEY"],
+                    app.config["APIPEDIA_VOICE"],
+                    timeout=app.config["TTS_TIMEOUT"],
+                )
+                # Simpan nama berkasnya supaya permintaan berikutnya tidak memanggil TTS lagi.
+                if audio_file and word:
+                    remember_audio(connection, aksara, audio_file)
         finally:
             connection.close()
-        meaning = word.get("meaning") if word else None
-        google_key = app.config["GOOGLE_TRANSLATE_API_KEY"]
-        google_script_url = app.config["GOOGLE_TRANSLATE_SCRIPT_URL"]
-        is_single_aksara = len(translated.chars) <= 1
-        if not word and not is_single_aksara:
-            meaning = (
-                translate_sundanese_to_indonesian(
-                    translated.latin,
-                    google_key,
-                    google_script_url,
-                )
-                or meaning
-            )
-        if is_single_aksara and not meaning:
-            meaning = translated.latin
-        audio_file = word.get("audio_file") if word else None
-        if not audio_file:
-            audio_file = synthesize_audio(
-                translated.latin,
-                app.config["AUDIO_DIR"],
-                app.config["APIPEDIA_API_KEY"],
-                app.config["APIPEDIA_VOICE"],
-            )
         audio_url = f"/audio/{audio_file}" if audio_file else None
         return jsonify(
             success=True,
             aksara=aksara,
             latin=translated.latin,
             meaning=meaning,
+            meaning_source=meaning_source,
+            matched_latin=matched_latin,
             audio_url=audio_url,
             character_details=character_details(translated.chars),
             confidence=confidence,

@@ -1,4 +1,9 @@
-"""SQLite storage and fuzzy lookup for the AKSARA vocabulary."""
+"""SQLite storage and fuzzy lookup for the AKSARA vocabulary.
+
+Lookup tidak pernah mengembalikan tebakan sebagai fakta: hasil cocok persis ditandai
+``match="exact"``, hasil mirip ditandai ``match="fuzzy"`` beserta skornya, supaya
+lapisan API bisa memberi tahu pengguna bahwa maknanya berasal dari kata terdekat.
+"""
 
 from __future__ import annotations
 
@@ -18,6 +23,14 @@ CREATE TABLE IF NOT EXISTS vocabulary (
 )
 """
 
+# Ambang kemiripan dan panjang minimum. Kata pendek ("bra", "cai") terlalu mudah
+# berdekatan dengan kata lain, dan makna nama jalan yang salah lebih menyesatkan
+# daripada tidak ada makna sama sekali.
+FUZZY_THRESHOLD = 0.75
+MIN_FUZZY_LENGTH = 4
+
+_COLUMNS = "aksara, latin, meaning, audio_file, source"
+
 
 def connect(path: str | Path) -> sqlite3.Connection:
     connection = sqlite3.connect(path)
@@ -32,22 +45,44 @@ def connect(path: str | Path) -> sqlite3.Connection:
     return connection
 
 
+def best_fuzzy_match(connection: sqlite3.Connection, latin: str) -> dict | None:
+    """Kata kamus paling mirip dengan ``latin``, atau None bila di bawah ambang."""
+    query = latin.strip().lower()
+    if len(query) < MIN_FUZZY_LENGTH:
+        return None
+    best = None
+    best_score = 0.0
+    for candidate in connection.execute(f"SELECT {_COLUMNS} FROM vocabulary").fetchall():
+        if len(candidate["latin"]) < MIN_FUZZY_LENGTH:
+            continue
+        score = SequenceMatcher(None, query, candidate["latin"].lower()).ratio()
+        if score > best_score:
+            best, best_score = dict(candidate), score
+    if best is None or best_score < FUZZY_THRESHOLD:
+        return None
+    return {**best, "match": "fuzzy", "score": round(best_score, 3)}
+
+
 def find_word(connection: sqlite3.Connection, aksara: str, latin: str) -> dict | None:
+    """Cari entri kamus: persis dulu (aksara atau latin), lalu kemiripan latin.
+
+    Hasil selalu punya ``match`` ("exact" atau "fuzzy") supaya pemanggil bisa
+    membedakan makna pasti dari tebakan.
+    """
     row = connection.execute(
-        "SELECT aksara, latin, meaning, audio_file, source FROM vocabulary WHERE aksara = ? OR lower(latin) = lower(?)",
+        f"SELECT {_COLUMNS} FROM vocabulary WHERE aksara = ? OR lower(latin) = lower(?)",
         (aksara, latin),
     ).fetchone()
     if row:
-        return dict(row)
+        return {**dict(row), "match": "exact", "score": 1.0}
+    return best_fuzzy_match(connection, latin)
 
-    candidates = connection.execute(
-        "SELECT aksara, latin, meaning, audio_file, source FROM vocabulary"
-    ).fetchall()
-    best = None
-    best_score = 0.0
-    for candidate in candidates:
-        score = SequenceMatcher(None, latin.lower(), candidate["latin"].lower()).ratio()
-        if score > best_score:
-            best, best_score = dict(candidate), score
-    return best if best_score >= 0.75 else None
+
+def remember_audio(connection: sqlite3.Connection, aksara: str, audio_file: str) -> None:
+    """Simpan nama berkas audio hasil sintesis agar permintaan berikutnya memakai cache."""
+    connection.execute(
+        "UPDATE vocabulary SET audio_file = ? WHERE aksara = ? AND (audio_file IS NULL OR audio_file != ?)",
+        (audio_file, aksara, audio_file),
+    )
+    connection.commit()
 

@@ -14,9 +14,19 @@ Ponsel → Vercel (frontend, HTTPS) ──POST /api/recognize──► Backend D
 Dari **root repo**:
 ```bash
 docker build -f backend/Dockerfile -t aksara-backend .
-docker run -p 8080:8080 -e AKSARA_CORS_ORIGIN="*" aksara-backend
+docker run -p 8080:8080 -e AKSARA_CORS_ORIGIN="*" -v aksara-audio:/data/aksara-audio aksara-backend
 curl -F "image=@contoh.png;type=image/png" http://localhost:8080/api/recognize
 ```
+### Isi cache audio sekali
+
+```bash
+docker run --rm -v aksara-audio:/data/aksara-audio -e AKSARA_AUDIO_DIR=/data/aksara-audio \
+  -e APIPEDIA_API_KEY=apk_isi_dengan_key_kamu aksara-backend python -m backend.pregenerate_audio
+```
+
+Nama berkas audio deterministik, jadi setelah langkah ini kata yang sudah ada di kamus tidak memanggil
+APIPedia lagi saat pengguna memindai, dan tautan `/audio/...` tetap hidup selama volume ada.
+
 Variabel lingkungan:
 
 | Variabel | Fungsi |
@@ -24,7 +34,8 @@ Variabel lingkungan:
 | `AKSARA_CORS_ORIGIN` | Origin frontend yang diizinkan. Di produksi isi URL Vercel (mis. `https://aksara.vercel.app`), bukan `*` |
 | `APIPEDIA_API_KEY`, `APIPEDIA_VOICE` | Audio TTS (opsional) |
 | `GOOGLE_TRANSLATE_SCRIPT_URL` | Arti kata (opsional) |
-| `AKSARA_AUDIO_DIR` | Folder cache audio (default `/tmp/aksara_audio` di Docker) |
+| `AKSARA_AUDIO_DIR` | Folder cache audio (default `backend/audio`; isi `/data/aksara-audio` saat memakai volume Docker) |
+| `AKSARA_TTS_TIMEOUT` | Batas tunggu panggilan TTS dalam detik (default 5). Lewat batas → `audio_url: null`, pengenalan tetap berhasil |
 | `PORT` | Port (default 8080; beberapa host mengatur sendiri) |
 
 Pilih host yang bisa menjalankan Docker dan punya **RAM minimal ±1 GB**. Saat diukur di sandbox, satu
@@ -48,8 +59,9 @@ Tidak perlu `vercel.json`.
   lalu lihat log backend.
 
 ## Keterbatasan yang diketahui
-- **Audio TTS bersifat sementara.** Cache audio ada di disk sementara; setelah backend restart, berkas lama
-  hilang dan tautan audio dari riwayat lama bisa 404. Untuk produksi sungguhan perlu penyimpanan permanen.
+- **Audio TTS butuh folder persisten.** Cache di `/tmp` hilang saat container dibuat ulang, sehingga tautan
+  audio dari riwayat lama mati. Jadi jalankan backend dengan volume (lihat perintah `docker run -v` di atas)
+  dan isi cache sekali dengan `python -m backend.pregenerate_audio`.
 - **Permintaan pertama lambat** karena model dimuat saat pemanggilan pertama.
 - **Dockerfile belum diuji build** (tidak ada Docker di lingkungan tempat aku menguji). Yang sudah diuji:
   gunicorn dengan `backend.app:app` berjalan dan memberi respons benar dengan model asli.
